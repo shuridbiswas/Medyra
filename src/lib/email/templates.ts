@@ -169,3 +169,82 @@ Your Medyra sign-in code is ${code}. It works for ${input.minutes} minutes and o
 Didn't try to sign in? Someone may know your password. Reset it right away: ${siteUrl()}/forgot-password`,
   };
 }
+
+/** The code that proves control of a school address. It confirms the address only, never enrolment. */
+export function institutionalCodeEmail(input: { code: string; minutes: number; institution: string }): EmailMessage {
+  const code = input.code.replace(/[^0-9]/g, "");
+  const school = escapeHtml(input.institution);
+  return {
+    subject: `Medyra school email code: ${code} / Code de courriel scolaire`,
+    html: layout({
+      preheader: `Your Medyra school email code is ${code}.`,
+      heading: "Confirm your school email / Confirmez votre courriel scolaire",
+      body: `<p style="margin:0 0 12px;">Enter this code in Medyra to show you control this ${school} address:</p>
+<p style="margin:0 0 16px;font-size:32px;font-weight:700;letter-spacing:6px;color:${MAROON};">${escapeHtml(code)}</p>
+<p style="margin:0 0 12px;">It works for ${input.minutes} minutes and only once. Confirming an address does not verify your enrolment; that needs official evidence.</p>
+<p style="margin:0 0 12px;">Saisissez ce code dans Medyra pour montrer que vous contrôlez cette adresse (${school}). Il est valide ${input.minutes} minutes et une seule fois. Confirmer une adresse ne vérifie pas votre inscription; il faut une preuve officielle.</p>
+<p style="margin:0;">Not you? Ignore this email. / Ce n'est pas vous? Ignorez ce courriel.</p>`,
+    }),
+    text: `Your Medyra school email code is ${code}. It works for ${input.minutes} minutes and only once. Confirming an address does not verify your enrolment.
+
+Votre code Medyra est ${code}. Il est valide ${input.minutes} minutes et une seule fois. Confirmer une adresse ne vérifie pas votre inscription.
+
+Not you? Ignore this email. / Ce n'est pas vous? Ignorez ce courriel.`,
+  };
+}
+
+export type VerificationNotice =
+  | "received"
+  | "email_confirmed"
+  | "more_information"
+  | "approved"
+  | "rejected"
+  | "revoked";
+
+const NOTICE_TEXT: Record<VerificationNotice, { en: [string, string]; fr: [string, string] }> = {
+  received: {
+    en: ["We received your student verification request", "A reviewer will look at it. You can follow it on your dashboard."],
+    fr: ["Nous avons reçu votre demande de vérification étudiante", "Un évaluateur l'examinera. Vous pouvez la suivre dans votre tableau de bord."],
+  },
+  email_confirmed: {
+    en: ["Your school email is confirmed", "This confirms the address only. Official evidence is still needed to verify your enrolment."],
+    fr: ["Votre courriel scolaire est confirmé", "Cela confirme l'adresse seulement. Une preuve officielle reste nécessaire pour vérifier votre inscription."],
+  },
+  more_information: {
+    en: ["More information is needed", "A reviewer left a note for you on your dashboard."],
+    fr: ["Des renseignements supplémentaires sont requis", "Un évaluateur vous a laissé une note dans votre tableau de bord."],
+  },
+  approved: {
+    en: ["Your student verification was approved", "Your Verified badge now shows on your profile and posts until the credential expires. You can see its scope on your dashboard."],
+    fr: ["Votre vérification étudiante a été approuvée", "Votre badge Vérifié apparaît sur votre profil et vos publications jusqu'à l'expiration. Consultez sa portée dans votre tableau de bord."],
+  },
+  rejected: {
+    en: ["Your student verification was not approved", "Details are on your dashboard, where you can start a new request."],
+    fr: ["Votre vérification étudiante n'a pas été approuvée", "Les détails sont dans votre tableau de bord, où vous pouvez faire une nouvelle demande."],
+  },
+  revoked: {
+    en: ["A student credential was removed", "Details are on your dashboard."],
+    fr: ["Un titre étudiant a été retiré", "Les détails sont dans votre tableau de bord."],
+  },
+};
+
+/** Short, bilingual, and always a pointer to the dashboard. Never contains evidence or reviewer notes. */
+export function verificationNoticeEmail(input: { firstName: string; notice: VerificationNotice }): EmailMessage {
+  const first = name(input.firstName);
+  const t = NOTICE_TEXT[input.notice];
+  const url = `${siteUrl()}/verification/student/status`;
+  return {
+    subject: `${t.en[0]} / ${t.fr[0]}`,
+    html: layout({
+      preheader: t.en[0],
+      heading: t.en[0],
+      body: `<p style="margin:0 0 12px;">Hi ${escapeHtml(first)}, ${escapeHtml(t.en[1])}</p>
+<p style="margin:0 0 12px;">Bonjour ${escapeHtml(first)}, ${escapeHtml(t.fr[1])}</p>${button("Open my dashboard / Ouvrir mon tableau de bord", url)}`,
+    }),
+    text: `Hi ${first}, ${t.en[1]}
+
+Bonjour ${first}, ${t.fr[1]}
+
+${url}`,
+  };
+}

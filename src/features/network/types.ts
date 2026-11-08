@@ -20,6 +20,8 @@ export const noRelationship: Relationship = {
   following: false,
 };
 
+import type { MemberBadge } from "@/features/student-verification/types";
+
 /** The profile fields a member card may show. Never the whole profile row. */
 export type NetworkMember = Pick<
   ProfileRow,
@@ -37,7 +39,7 @@ export type NetworkMember = Pick<
   | "location_label"
   | "open_to_mentor"
   | "looking_for_mentorship"
->;
+> & { badge?: MemberBadge | null };
 
 export const NETWORK_MEMBER_COLUMNS =
   "id, username, first_name, last_name, headline, avatar_path, member_type, institution, specialty, fields, country, location_label, open_to_mentor, looking_for_mentorship";

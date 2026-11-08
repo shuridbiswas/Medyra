@@ -25,6 +25,8 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
+  // Student verification uploads (5 MB files) arrive through a server action.
+  experimental: { serverActions: { bodySizeLimit: "6mb" } },
   // The member home used to live at /home. Keep old links and bookmarks working (query strings
   // such as ?category= are carried over).
   async redirects() {

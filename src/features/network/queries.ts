@@ -1,4 +1,5 @@
 import "server-only";
+import { getBadges, withBadges } from "@/features/student-verification/queries";
 import { createClient } from "@/lib/supabase/server";
 import {
   CONNECTIONS_PAGE_SIZE,
@@ -190,13 +191,14 @@ export async function listRequests(
     .overrideTypes<RequestRow[], { merge: false }>();
 
   if (error || !data) return { requests: [], failed: true };
+  const badges = await getBadges(data.map((r) => r.member?.id ?? ""));
   return {
     requests: data
       .filter((r) => r.member !== null)
       .map((r) => ({
         id: r.id,
         created_at: r.created_at,
-        member: r.member as NetworkMember,
+        member: { ...(r.member as NetworkMember), badge: badges.get(r.member?.id ?? "") ?? null },
       })),
   };
 }
@@ -234,7 +236,7 @@ export async function listConnections(
   const members = data
     .map((c) => (c.requester_id === profileId ? c.addressee : c.requester))
     .filter((m): m is NetworkMember => m !== null && Boolean(m.username));
-  return { members, total: count ?? members.length };
+  return { members: await withBadges(members), total: count ?? members.length };
 }
 
 /** The member directory. Self, unfinished profiles and members the viewer blocked are left out. */
@@ -283,5 +285,5 @@ export async function searchDirectory(
     .overrideTypes<NetworkMember[], { merge: false }>();
 
   if (error || !data) return { members: [], total: 0, failed: true };
-  return { members: data, total: count ?? data.length };
+  return { members: await withBadges(data), total: count ?? data.length };
 }

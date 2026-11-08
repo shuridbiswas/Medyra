@@ -58,7 +58,7 @@ Conventions:
 - Never invent credentials. Secrets only via `.env.local` (see `.env.example`); never commit real values.
 - Before finishing work: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
 
-## Current scope: Phases 1 to 4b, 4A, 6 and 7 (done)
+## Current scope: Phases 1 to 4b, 4A, 6, 7 and student verification (done)
 
 Phase 1: public welcome page at `/welcome` and informative placeholders (`/about`, `/community-guidelines`, `/privacy`, `/terms`, `/contact`; the legal pages are placeholders, not real policies).
 
@@ -116,7 +116,7 @@ Network architecture:
 - **Blocks** are private to the blocker. Policies call `private.has_block_between()` (security definer, answers only for pairs that include the caller); the `private` schema is otherwise not executable by `authenticated` (`revoke execute on all functions in schema private`: do the same after adding functions there). Blocking deletes connections, follows and related notifications by trigger. Actions never say a block is the reason something failed. Directory results hide members the viewer blocked; the reverse direction is enforced on writes only.
 - **Notifications** are inserted only by triggers (no insert grant), carry type, actor and entity ids and **never text**, skip self and blocked pairs, and honour `notification_preferences.inapp_connections|inapp_comments`. UI sentences come from `notifications/format.ts`. "Reply" = a comment on a post you already commented on (there is no threading). Mentions and community/mentorship events exist in the schema only.
 - **Saved items:** `saved_items(item_type, item_id)`, private, one per member and item; extend `saved_items_type_valid` and the insert policy for new types. Deleting a post removes its saves and notifications (trigger).
-- **Verification:** nobody is verified; member cards and profiles show "Unverified" (`components/verification-chip.tsx`). Do not add badges before a real process exists.
+- **Verification:** the badge comes only from the student verification feature (see below); anyone without a valid credential shows "Not Verified". Do not add other badges (professional licences, employers) before a real process exists.
 - **Column grants vs upsert:** owner columns are not updatable, and a PostgREST `upsert` writes them, so it is denied. Use `saveNotificationPreferences` (update, then insert) for owner-keyed rows such as `notification_preferences`.
 - Tests: `supabase/tests/network.test.ts` (PGlite policies and triggers), `src/features/{network,saved,notifications}/*.test.*`, `src/features/network/components/network-components.test.tsx`. The dev project was also checked live with two accounts.
 
@@ -166,6 +166,17 @@ Mentorship architecture (`src/features/mentorship/`):
 - Flow: mentee request (goals 20-1500, 5 a day, one pending per pair, blocked pairs refused) → mentor `decide_mentorship_request` (capacity check, opens or reopens the direct conversation, notifies the mentee) → `set_mentorship_status` (only the mentor pauses/resumes; either finishes) → feedback (completed only, one each, private to the two people). Mentors and requests use the existing `mentorship_event` notification.
 - Reports of a mentor listing use `submit_report('mentor', …)`; removal deletes the listing.
 - Tests: `supabase/tests/messaging-mentorship.test.ts` (three accounts, blocks, unauthorized access, requests, groups, capacity, feedback privacy), `src/features/{messaging,mentorship}/*.test.*`. `h.reset()` in `supabase/tests/helpers.ts` must list new tables.
+
+Student verification (Quebec students; migration `20261105000001_student_verification.sql`, docs in `docs/verification/`). Routes `/verification` (redirects), `/verification/student`, `/verification/student/status`, `/verification/student/history`, `/admin/student-verifications`.
+
+- Code in `src/features/student-verification/` (`machine.ts` status machine mirroring `private.can_transition`, `evidence.ts` byte inspection, `crypto.ts` keyed hashes, `content.ts` EN/FR wording via `?lang=fr`, `queries.ts`, `actions.ts` member steps, `admin-actions.ts` reviewer steps). Two claims: `CURRENT_STUDENT` and `CURRENT_PROGRAM_STUDENT`.
+- **Never** grant a badge from email ownership, an unvalidated upload, a pasted link, or a client-sent status. Requests and credentials change only inside the `security definer` functions (`approve_verification` locks the request, checks the whole checklist and writes event and audit rows in one transaction). Members have no write grants on these tables. Keep it that way.
+- Badges: `getBadges()`/`withBadges()` call `verified_badges()` on every request (expiry and revocation evaluated in SQL, no caching); any failure means Not Verified. Render only through `components/verification-chip.tsx`. Anonymous forum content has no author object and must never get a badge.
+- Evidence: private bucket `student-verification-evidence`; a file is openable only after the reviewer-triggered inspection (`static_ok`); `EVIDENCE_AV_REQUIRED=true` keeps files closed until an antivirus scan sets `av_clean` (not wired yet). Pasted share links are text and are never fetched. No evidence goes to Sentry, Pinecone, ProductBridge or logs.
+- Email: `sendToAddress` (in `lib/email/send.ts`) is allowed only for the member's own address, a database-confirmed school domain, or the address `verification_notice_recipient()` returns to an administrator.
+- Registry data (institutions, methods, programs) is edited in SQL by administrators. Email domains and programs are unconfirmed until a person checks an official source. No institution integration exists or is claimed.
+- Dev fixtures: `npm run seed:verification` (labelled `[DEV TEST DATA]`, dev project only).
+- Tests: `supabase/tests/student-verification.test.ts`, `src/features/student-verification/*.test.*`. `h.reset()` lists the new tables.
 
 Out of scope until later phases: employer and job features, jobs, automated or AI moderation, post media, AI features, per-field privacy settings, username changes, organization profiles (follows are member-only), mentions.
 

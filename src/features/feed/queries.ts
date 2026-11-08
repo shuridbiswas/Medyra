@@ -6,6 +6,7 @@ import {
 } from "@/features/feed/options";
 import type { FeedRequest } from "@/features/feed/schemas";
 import { getHiddenAuthorIds } from "@/features/safety/queries";
+import { getBadges } from "@/features/student-verification/queries";
 import type {
   FeedComment,
   FeedPage,
@@ -76,13 +77,14 @@ async function hydratePosts(
     saved = new Set((saves.data ?? []).map((i) => i.item_id));
   }
 
+  const badges = await getBadges(rows.map((r) => r.author?.id ?? ""));
   return rows.map((r) => ({
     id: r.id,
     category: r.category,
     body: r.body,
     created_at: r.created_at,
     edited_at: r.edited_at,
-    author: r.author as PostAuthor,
+    author: { ...(r.author as PostAuthor), badge: badges.get(r.author?.id ?? "") ?? null },
     likeCount: count(r.likes),
     commentCount: count(r.comments),
     likedByMe: liked.has(r.id),
@@ -193,6 +195,7 @@ export async function getComments(
 
   if (error || !data) return { comments: [], failed: true };
   const hidden = new Set(await getHiddenAuthorIds(viewerId));
+  const badges = await getBadges(data.map((c) => c.author?.id ?? ""));
   return {
     comments: data
       .filter((c) => c.author !== null && !hidden.has(c.author.id))
@@ -201,7 +204,7 @@ export async function getComments(
         post_id: c.post_id,
         body: c.body,
         created_at: c.created_at,
-        author: c.author as PostAuthor,
+        author: { ...(c.author as PostAuthor), badge: badges.get(c.author?.id ?? "") ?? null },
         isOwn: c.author?.id === viewerId,
       })),
   };

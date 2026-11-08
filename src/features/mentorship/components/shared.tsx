@@ -91,7 +91,7 @@ export function MentorCard({ mentor }: { mentor: MentorListing }) {
               {name}
             </Link>
           </h3>
-          <VerificationChip />
+          <VerificationChip badge={m.badge} />
         </div>
         <p className="text-sm text-muted-foreground">
           {[role, ...fields].filter(Boolean).join(" · ")}

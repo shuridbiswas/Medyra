@@ -37,7 +37,7 @@ export function MemberRow({
           {role && role !== "member" ? (
             <span className="rounded-full border border-maroon-200 px-2 py-0.5 text-xs font-medium text-maroon-700">{ROLE_LABELS[role]}</span>
           ) : null}
-          <VerificationChip />
+          <VerificationChip badge={member.badge} />
         </div>
         <p className="truncate text-sm text-muted-foreground">
           {[type, member.headline].filter(Boolean).join(" · ") || (member.username ? `@${member.username}` : "")}

@@ -25,6 +25,7 @@ import {
 } from "@/features/feed/options";
 import { idleForm, type FeedPost, type FormState } from "@/features/feed/types";
 import { cn } from "@/lib/utils";
+import { VerificationChip } from "@/components/verification-chip";
 
 const actionButton =
   "inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-maroon-50 hover:text-maroon-900 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-60";
@@ -213,7 +214,8 @@ export function PostCard({
               </Link>
             ) : (
               name
-            )}
+            )}{" "}
+            <VerificationChip badge={post.author.badge} />
           </p>
           {post.author.headline ? (
             <p className="truncate text-sm text-muted-foreground">

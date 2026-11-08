@@ -1,4 +1,5 @@
 import "server-only";
+import { getBadges } from "@/features/student-verification/queries";
 import { createClient } from "@/lib/supabase/server";
 import type { CommunityRole, CommunityRow } from "@/lib/supabase/database.types";
 import { getHiddenAuthorIds } from "@/features/safety/queries";
@@ -155,7 +156,11 @@ export async function listCommunityMembers(
       .overrideTypes<MemberRow[], { merge: false }>(),
   ]);
   if (staff.error || members.error) return { staff: [], members: [], total: 0, failed: true };
-  return { staff: keep(staff.data), members: keep(members.data), total: members.count ?? 0 };
+  const staffList = keep(staff.data);
+  const memberList = keep(members.data);
+  const badges = await getBadges([...staffList, ...memberList].map((e) => e.member.id));
+  const badged = (list: MemberEntry[]) => list.map((e) => ({ ...e, member: { ...e.member, badge: badges.get(e.member.id) ?? null } }));
+  return { staff: badged(staffList), members: badged(memberList), total: members.count ?? 0 };
 }
 
 export type JoinRequestEntry = { id: string; message: string | null; created_at: string; member: NetworkMember };

@@ -70,11 +70,29 @@ export async function sendToMember(
   message: EmailMessage,
   category: EmailCategory,
 ): Promise<SendResult> {
+  if (category === "activity" && !(await activityEmailsEnabled(member.id)))
+    return { status: "skipped", reason: "preference_off" };
+  return sendToAddress(member.email, message, member.id, category);
+}
+
+/**
+ * Lower-level send used by sendToMember and by student verification only. The caller must have
+ * obtained `address` from a trusted place: the signed-in member's own session, a school domain the
+ * database confirmed for the institution, or the database function that returns a request owner's
+ * address to an administrator. Never pass an address that arrived unchecked from a form. Rate
+ * limited per `rateKey` (a member id).
+ */
+export async function sendToAddress(
+  address: string | null | undefined,
+  message: EmailMessage,
+  rateKey: string,
+  category: EmailCategory,
+): Promise<SendResult> {
   const resend = getResend();
   const from = fromAddress();
   if (!resend || !from) return { status: "skipped", reason: "not_configured" };
 
-  const to = recipientSchema.safeParse(member.email);
+  const to = recipientSchema.safeParse(address);
   if (!to.success) return { status: "skipped", reason: "no_email" };
   const body = messageSchema.safeParse(message);
   if (!body.success) {
@@ -82,10 +100,7 @@ export async function sendToMember(
     return { status: "failed" };
   }
 
-  if (category === "activity" && !(await activityEmailsEnabled(member.id)))
-    return { status: "skipped", reason: "preference_off" };
-
-  const limited = await checkRateLimit("email", member.id);
+  const limited = await checkRateLimit("email", rateKey);
   if (!limited.ok) return { status: "skipped", reason: "rate_limited" };
 
   try {

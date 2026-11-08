@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { getHiddenAuthorIds } from "@/features/safety/queries";
+import { getBadges } from "@/features/student-verification/queries";
 import { FORUM_PAGE_SIZE } from "@/features/forums/options";
 import type { ListParams } from "@/features/forums/schemas";
 import {
@@ -57,6 +58,13 @@ type SummaryRow = {
 };
 
 const SUMMARY_COLUMNS = `id, title, body, topic_slug, kind, is_anonymous, accepted_answer_id, created_at, author:profiles!forum_questions_author_id_fkey(${FORUM_AUTHOR_COLUMNS}), answers:forum_answers!forum_answers_question_fkey(count)`;
+
+/** Named authors only: an anonymous item has no author object, so nothing here can reveal one. */
+async function attachBadges(authors: (ForumAuthor | null)[]) {
+  const named = authors.filter((a): a is ForumAuthor => a !== null);
+  const map = await getBadges(named.map((a) => a.id));
+  for (const a of named) a.badge = map.get(a.id) ?? null;
+}
 
 const toSummary = (r: SummaryRow): QuestionSummary => ({
   id: r.id,
@@ -121,7 +129,9 @@ export async function listQuestions(
     .range(from, from + FORUM_PAGE_SIZE - 1)
     .overrideTypes<SummaryRow[], { merge: false }>();
   if (error || !data) return { questions: [], total: 0, failed: true };
-  return { questions: data.map(toSummary), total: total ?? data.length };
+  const questions = data.map(toSummary);
+  await attachBadges(questions.map((q) => q.author));
+  return { questions, total: total ?? data.length };
 }
 
 type AnswerRow = {
@@ -255,8 +265,10 @@ export async function getQuestion(viewerId: string, id: string): Promise<Questio
       x.created_at.localeCompare(y.created_at),
   );
 
+  const summary = toSummary(question);
+  await attachBadges([summary.author, ...entries.map((e) => e.author), ...entries.flatMap((e) => e.replies.map((r) => r.author))]);
   return {
-    ...toSummary(question),
+    ...summary,
     edited_at: question.edited_at,
     isMine: mine.has(`question:${id}`),
     followedByMe: Boolean(follow.data),

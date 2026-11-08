@@ -63,7 +63,7 @@ async function MentorContent({ params }: Props) {
             <div className="min-w-0">
               <h1 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-2xl font-bold text-maroon-900">
                 {name}
-                <VerificationChip />
+                <VerificationChip badge={m.badge} />
               </h1>
               {profession ? <p className="text-sm text-muted-foreground">{profession}</p> : null}
               {m.username ? (

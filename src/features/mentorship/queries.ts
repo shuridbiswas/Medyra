@@ -7,6 +7,7 @@ import type {
   MentorshipRow,
 } from "@/lib/supabase/database.types";
 import { NETWORK_MEMBER_COLUMNS, type NetworkMember } from "@/features/network/types";
+import { getBadges } from "@/features/student-verification/queries";
 import { MENTOR_PAGE_SIZE } from "@/features/mentorship/options";
 import type { MentorFilters } from "@/features/mentorship/schemas";
 
@@ -24,6 +25,11 @@ export type MentorListing = Pick<
   MentorProfileRow,
   "user_id" | "bio" | "expertise" | "experience_years" | "organization" | "topics" | "languages" | "capacity" | "session_formats" | "accepting"
 > & { member: NetworkMember };
+
+async function attach(mentors: MentorListing[]): Promise<MentorListing[]> {
+  const badges = await getBadges(mentors.map((m) => m.member.id));
+  return mentors.map((m) => ({ ...m, member: { ...m.member, badge: badges.get(m.member.id) ?? null } }));
+}
 
 type ListingRow = Omit<MentorListing, "member"> & { member: NetworkMember | null };
 
@@ -53,7 +59,7 @@ export async function listMentors(
     .overrideTypes<ListingRow[], { merge: false }>();
   if (error || !data) return { mentors: [], total: 0, failed: true };
   return {
-    mentors: data.flatMap((m) => (m.member ? [{ ...m, member: m.member }] : [])),
+    mentors: await attach(data.flatMap((m) => (m.member ? [{ ...m, member: m.member }] : []))),
     total: count ?? data.length,
   };
 }
@@ -103,7 +109,7 @@ export async function getMentor(viewerId: string, mentorId: string): Promise<Men
   ]);
   return {
     ...data,
-    member: data.member,
+    member: { ...data.member, badge: (await getBadges([data.member.id])).get(data.member.id) ?? null },
     availability: availability.data ?? [],
     pendingRequest: pending.data ?? null,
     mentorship: relationship.data ?? null,

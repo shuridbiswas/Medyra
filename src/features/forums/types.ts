@@ -1,3 +1,5 @@
+import type { MemberBadge } from "@/features/student-verification/types";
+
 /** Public author fields. Null for an anonymous question, answer or reply: there is nothing to show. */
 export type ForumAuthor = {
   id: string;
@@ -7,6 +9,8 @@ export type ForumAuthor = {
   headline: string | null;
   avatar_path: string | null;
   member_type: string | null;
+  /** Current valid student credentials; never set for anonymous content (there is no author object). */
+  badge?: MemberBadge | null;
 };
 
 export const FORUM_AUTHOR_COLUMNS = "id, username, first_name, last_name, headline, avatar_path, member_type";

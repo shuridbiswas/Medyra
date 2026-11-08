@@ -14,6 +14,7 @@ import {
 } from "@/features/feed/actions";
 import { COMMENT_MAX_LENGTH } from "@/features/feed/options";
 import type { FeedComment } from "@/features/feed/types";
+import { VerificationChip } from "@/components/verification-chip";
 import { ReportButton } from "@/features/safety/components/report-button";
 
 const fullName = (a: FeedComment["author"]) =>
@@ -126,7 +127,8 @@ export function Comments({
                       <span className="font-semibold text-maroon-900">
                         {fullName(c.author)}
                       </span>
-                    )}
+                    )}{" "}
+                    <VerificationChip badge={c.author.badge} />
                     <RelativeTime
                       iso={c.created_at}
                       className="ml-2 text-xs text-muted-foreground"

@@ -10,7 +10,7 @@ import type { ForumAuthor } from "@/features/forums/types";
 
 /**
  * Who wrote something. A public writer shows their name, their self-reported role and the shared
- * "Unverified" chip (nobody is verified yet). An anonymous writer shows only "Anonymous member":
+ * verification chip (Not Verified unless a valid credential exists). An anonymous writer shows only "Anonymous member":
  * no role, no photo, no link, nothing that could narrow them down.
  */
 export function AuthorLine({
@@ -63,7 +63,7 @@ export function AuthorLine({
               name
             )}
           </span>
-          <VerificationChip />
+          <VerificationChip badge={author.badge} />
         </p>
         <p className="truncate text-xs text-muted-foreground">
           {role ? `${role} (self-reported) · ` : ""}

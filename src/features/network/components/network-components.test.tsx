@@ -181,7 +181,7 @@ describe("MemberCard", () => {
     render(<MemberCard member={member} />);
     expect(screen.getByRole("link", { name: "Sam Kowalski" })).toHaveAttribute("href", "/profile/sam_k");
     expect(screen.getByText("@sam_k")).toBeInTheDocument();
-    expect(screen.getByText("Unverified")).toBeInTheDocument();
+    expect(screen.getByText("Not Verified")).toBeInTheDocument();
     expect(screen.getByText("Social work student")).toBeInTheDocument();
     expect(screen.getByText("Graduate student · McGill University")).toBeInTheDocument();
     expect(screen.getByText("Montreal, Canada")).toBeInTheDocument();

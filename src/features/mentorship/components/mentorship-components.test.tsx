@@ -37,7 +37,7 @@ describe("mentor cards and framing", () => {
   it("labels expertise as self-declared and every mentor as unverified, with no accreditation claim", () => {
     render(<MentorCard mentor={mentor} />);
     expect(screen.getByRole("link", { name: "Mia M" })).toHaveAttribute("href", "/mentorship/m1");
-    expect(screen.getByText("Unverified")).toBeInTheDocument();
+    expect(screen.getByText("Not Verified")).toBeInTheDocument();
     expect(screen.getByText("(self-declared)")).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/accredited mentor|verified mentor|certified|licensed supervisor/i);
     expect(screen.getByText(/up to 2 mentees/i)).toBeInTheDocument();

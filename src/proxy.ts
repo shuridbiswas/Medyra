@@ -29,6 +29,7 @@ const PRIVATE_PREFIXES = [
   "/careers",
   "/saved",
   "/feedback",
+  "/verification",
 ];
 /** Pages only for signed-out visitors. */
 const GUEST_ONLY = ["/login", "/signup", "/forgot-password"];
@@ -98,6 +99,7 @@ export const config = {
     "/careers/:path*",
     "/saved/:path*",
     "/feedback/:path*",
+    "/verification/:path*",
     "/onboarding/:path*",
     "/reset-password/:path*",
     "/login",

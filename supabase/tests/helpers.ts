@@ -148,6 +148,15 @@ export async function createHarness() {
       delete from public.mentorship_requests;
       delete from public.mentor_profiles;
       delete from public.conversations;
+      alter table public.verification_review_events disable trigger verification_events_append_only;
+      alter table public.verification_audit_log disable trigger verification_audit_append_only;
+      delete from public.student_verified_credentials;
+      delete from public.student_verification_requests;
+      delete from public.verification_audit_log;
+      delete from public.academic_programs;
+      update public.academic_institutions set email_domains = '{}', email_domains_status = 'unconfirmed';
+      alter table public.verification_review_events enable trigger verification_events_append_only;
+      alter table public.verification_audit_log enable trigger verification_audit_append_only;
       delete from public.forum_questions;
       delete from public.forum_identity;
       delete from public.posts;

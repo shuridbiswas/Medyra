@@ -104,9 +104,9 @@ describe("ProfileHeader", () => {
     expect(screen.getByRole("button", { name: "Connect" })).toBeInTheDocument();
   });
 
-  it("says Unverified instead of showing a verification badge", () => {
+  it("shows Not Verified until a credential is approved", () => {
     render(<ProfileHeader profile={profile} isOwner={false} avatarSrc={null} coverSrc={null} />);
-    expect(screen.getByText("Unverified")).toBeInTheDocument();
+    expect(screen.getByText("Not Verified")).toBeInTheDocument();
   });
 
   it("copes with an incomplete profile (no headline, location or photo)", () => {

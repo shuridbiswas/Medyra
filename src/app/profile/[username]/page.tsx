@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { AppFrame } from "@/components/layout/app-frame";
 import { AppHeader } from "@/components/layout/app-header";
 import { avatarUrl, coverUrl, requireMember } from "@/lib/auth/session";
+import { getBadges } from "@/features/student-verification/queries";
 import { ProfileHeader } from "@/features/profile/components/profile-header";
 import { ProfileTabs } from "@/features/profile/components/profile-tabs";
 import {
@@ -71,12 +72,13 @@ async function ProfileContent({ params }: Props) {
   const { education, experience, skills } = data;
   const name = [fullProfile.first_name, fullProfile.last_name].filter(Boolean).join(" ");
 
-  const [counts, preview, relationship, blockedIds, muted] = await Promise.all([
+  const [counts, preview, relationship, blockedIds, muted, badges] = await Promise.all([
     getNetworkCounts(fullProfile.id),
     listConnections(fullProfile.id, 1, 8),
     isOwner ? Promise.resolve(null) : getRelationship(user.id, fullProfile.id),
     isOwner ? Promise.resolve<string[]>([]) : getBlockedIds(user.id),
     isOwner ? Promise.resolve(false) : isMuted(user.id, fullProfile.id),
+    getBadges([fullProfile.id]),
   ]);
   const blockedByMe = blockedIds.includes(fullProfile.id);
   // Members who limit details to connections show everyone else just their identity card.
@@ -128,6 +130,7 @@ async function ProfileContent({ params }: Props) {
             avatarSrc={avatarUrl(profile.avatar_path)}
             coverSrc={coverUrl(profile.cover_path)}
             actions={actions}
+            badge={badges.get(fullProfile.id) ?? null}
           />
           {isOwner ? (
             <CompletenessCard

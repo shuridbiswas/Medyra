@@ -1,10 +1,14 @@
 import type { ProfileRow } from "@/lib/supabase/database.types";
+import type { MemberBadge } from "@/features/student-verification/types";
 
 /** Only the author fields a post or comment needs. Never the whole profile row. */
 export type PostAuthor = Pick<
   ProfileRow,
   "id" | "username" | "first_name" | "last_name" | "headline" | "avatar_path"
->;
+> & {
+  /** The author's current valid student credentials (read at request time), or null when not verified. */
+  badge?: MemberBadge | null;
+};
 
 export type FeedPost = {
   id: string;

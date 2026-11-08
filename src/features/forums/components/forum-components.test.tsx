@@ -37,14 +37,14 @@ describe("AuthorLine", () => {
   it("shows a public writer's name, self-reported role and the unverified chip", () => {
     render(<AuthorLine author={author} anonymous={false} createdAt="2026-11-03T10:00:00Z" />);
     expect(screen.getByRole("link", { name: "Alice Adams" })).toHaveAttribute("href", "/profile/alice_a");
-    expect(screen.getByText("Unverified")).toBeInTheDocument();
+    expect(screen.getByText("Not Verified")).toBeInTheDocument();
     expect(screen.getByText(/self-reported/i)).toBeInTheDocument();
   });
 
   it("shows nothing about an anonymous writer, even if an author object is passed", () => {
     const { container } = render(<AuthorLine author={author} anonymous createdAt="2026-11-03T10:00:00Z" />);
     expect(screen.getByText("Anonymous member")).toBeInTheDocument();
-    expect(container.textContent).not.toMatch(/Alice|Adams|alice_a|educator|Unverified/i);
+    expect(container.textContent).not.toMatch(/Alice|Adams|alice_a|educator|Verified/i);
     expect(screen.queryByRole("link")).toBeNull();
   });
 });

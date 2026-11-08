@@ -6,11 +6,11 @@ import {
   generalLocation,
 } from "@/features/profile/format";
 import { fullName, type PublicProfile } from "@/features/profile/visibility";
-import { VerificationChip } from "@/components/verification-chip";
+import { VerificationChip, type ChipBadge } from "@/components/verification-chip";
 
 /**
  * The identity card: cover, photo, name and the few facts people scan first. Credentials are not
- * verified in Medyra yet, so the card says "Unverified" instead of showing a badge. `actions`
+ * verified in Medyra yet, so the card says "Not Verified" unless a valid student credential exists. `actions`
  * holds connect / follow / block controls when someone else is looking.
  */
 export function ProfileHeader({
@@ -19,8 +19,10 @@ export function ProfileHeader({
   avatarSrc,
   coverSrc,
   actions,
+  badge,
 }: {
   profile: PublicProfile;
+  badge?: ChipBadge;
   isOwner: boolean;
   avatarSrc: string | null;
   coverSrc: string | null;
@@ -69,7 +71,7 @@ export function ProfileHeader({
           <h1 className="text-2xl leading-tight font-bold text-maroon-900">{name}</h1>
           <p className="mt-0.5 flex items-center justify-center gap-2 text-sm text-muted-foreground">
             @{profile.username}
-            <VerificationChip />
+            <VerificationChip badge={badge} />
           </p>
           {profile.headline ? (
             <p className="mt-2 text-base text-maroon-900/90">{profile.headline}</p>

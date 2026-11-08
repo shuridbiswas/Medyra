@@ -47,7 +47,7 @@ export function MemberCard({
               {name}
             </Link>
           </h3>
-          <VerificationChip />
+          <VerificationChip badge={member.badge} />
         </div>
         <p className="truncate text-sm text-muted-foreground">@{member.username}</p>
         {member.headline ? (

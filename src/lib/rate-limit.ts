@@ -25,6 +25,7 @@ export type RateLimitPolicy =
   | "message"
   | "mentorship"
   | "search"
+  | "verification"
   | "api"
   | "email";
 
@@ -45,6 +46,7 @@ export const RATE_LIMIT_POLICIES: Record<
   forum: { limit: 20, window: "10 m", message: "You're posting quickly. Please wait a few minutes." },
   message: { limit: 40, window: "1 m", message: "You're sending messages quickly. Please wait a moment." },
   mentorship: { limit: 20, window: "10 m", message: "You're doing that quickly. Please wait a few minutes." },
+  verification: { limit: 30, window: "10 m", message: "You're doing that quickly. Please wait a few minutes." },
   search: { limit: 30, window: "1 m", message: "Too many searches. Please wait a moment." },
   api: { limit: 120, window: "1 m", message: "Too many requests. Please wait a moment." },
   email: { limit: 5, window: "1 h", message: "Too many emails requested. Please try again later." },

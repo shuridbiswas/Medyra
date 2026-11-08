@@ -315,7 +315,18 @@ describe("profile system (Phase 3)", () => {
     const cols = await db.query<{ table_name: string; column_name: string }>(
       "select table_name, column_name from information_schema.columns where table_schema = 'public'",
     );
-    expect(cols.rows.filter((c) => /email|password|token|secret/i.test(c.column_name))).toEqual([]);
+    // Student verification keeps school-email DOMAINS, keyed hashes and a confirmation time; never an address.
+    const allowed = new Set([
+      "academic_institutions.email_domains",
+      "academic_institutions.email_domains_status",
+      "student_verification_requests.email_domain",
+      "student_verification_requests.email_verified_at",
+      "institutional_email_challenges.email_domain",
+      "institutional_email_challenges.email_hash",
+    ]);
+    expect(
+      cols.rows.filter((c) => /email|password|token|secret/i.test(c.column_name) && !allowed.has(`${c.table_name}.${c.column_name}`)),
+    ).toEqual([]);
   });
 });
 
