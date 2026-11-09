@@ -124,13 +124,20 @@ update public.notifications n
  where n.id = t.id and t.first_at is not null;
 `;
 
+let lastCall = 0;
+
 /** Management API: run SQL on the project with a scoped personal access token. */
 export async function managementQuery<T = unknown>(
   ref: string,
   token: string,
   query: string,
 ): Promise<T> {
-  for (let attempt = 0; attempt < 4; attempt++) {
+  let last = "";
+  for (let attempt = 0; attempt < 8; attempt++) {
+    // The Management API throttles bursts: keep a steady pace.
+    const wait = 450 - (Date.now() - lastCall);
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    lastCall = Date.now();
     const response = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -138,13 +145,14 @@ export async function managementQuery<T = unknown>(
     });
     if (response.ok) return (await response.json()) as T;
     if (response.status === 429 || response.status >= 500) {
-      await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+      last = `${response.status} ${(await response.text()).slice(0, 300)}`;
+      await new Promise((r) => setTimeout(r, response.status === 429 ? 5000 * (attempt + 1) : 2000 * (attempt + 1)));
       continue;
     }
     // Never echo the token; the server's message is about the SQL, not the credentials.
-    throw new Error(`Management API ${response.status}: ${(await response.text()).slice(0, 400)}`);
+    throw new Error(`Management API ${response.status}: ${(await response.text()).slice(0, 4000)}`);
   }
-  throw new Error("Management API kept failing after several attempts.");
+  throw new Error(`Management API kept failing after several attempts (last: ${last}).`);
 }
 
 /** Row counts for the seed accounts only (matched by the fictional email pattern). */

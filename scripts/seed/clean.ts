@@ -67,11 +67,28 @@ async function main() {
     console.log(`  removed ${removedImages} images; ${unreachable} accounts could not be signed in to`);
   }
 
+  // Rows that outlive their creator (communities keep created_by = null) or that the seeder tagged.
+  await managementQuery(
+    target.ref,
+    token,
+    `delete from public.reports where details like '[seed]%';
+     delete from public.communities where slug like 'seed-%';
+     delete from public.student_verified_credentials where issuer like '[DEV TEST DATA]%';
+     delete from public.student_verification_requests where student_message like '[DEV TEST DATA]%';
+     delete from public.academic_programs where official_name like '%(DEV TEST DATA)';`,
+  ).catch((e: unknown) => console.log(`  note: could not remove tagged rows (${e instanceof Error ? e.message.slice(0, 120) : e})`));
   const deleted = await managementQuery<{ email: string }[]>(
     target.ref,
     token,
     "delete from auth.users where email like 'seed+%@example.com' returning email",
   );
+  // Rows whose owner column is nullable or that hang off a conversation outlive the accounts.
+  await managementQuery(
+    target.ref,
+    token,
+    `delete from public.conversations c where not exists (select 1 from public.conversation_participants p where p.conversation_id = c.id);
+     delete from public.data_requests where user_id is null;`,
+  ).catch((e: unknown) => console.log(`  note: could not remove orphaned conversations (${e instanceof Error ? e.message.slice(0, 120) : e})`));
   console.log(`Deleted ${deleted.length} seed accounts (their profiles, posts, comments and likes cascade).`);
 
   if (file.accounts.length > 0) {

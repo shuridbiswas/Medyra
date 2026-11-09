@@ -31,17 +31,17 @@ export const BIO_SUFFIX: Record<Lang, string> = {
 export const FICTIONAL_MARKERS = ["(Profil fictif de test)", "(Fictional test profile)"] as const;
 
 export const TARGETS = {
-  members: 50,
-  incomplete: 4,
-  posts: 250,
+  members: 100,
+  incomplete: 8,
+  posts: 300,
   questions: 70,
   heavyPosts: 46,
-  comments: 400,
-  likes: 600,
-  connections: 40,
-  acceptedConnections: 30,
-  follows: 60,
-  frShare: 0.65,
+  comments: 600,
+  likes: 1500,
+  connections: 110,
+  acceptedConnections: 80,
+  follows: 90,
+  frShare: 0.7,
 } as const;
 
 export type SeedEducation = {

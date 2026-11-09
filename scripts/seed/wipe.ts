@@ -13,6 +13,7 @@
  * to any other account cannot be removed through the API; the preview and the final report list
  * how many there are instead of reaching for a privileged key.
  */
+import { writeFileSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
 import { memberClient, readAccounts, signIn, writeAccounts } from "./api.ts";
 import { assertDevOnly, loadEnvironment, requireManagementToken, SeedSafetyError } from "./safety.ts";
@@ -64,6 +65,15 @@ async function countsFor(ref: string, token: string): Promise<Record<string, num
   const [row] = await managementQuery<Record<string, number>[]>(ref, token, `select ${columns.join(", ")}`);
   return row;
 }
+
+/** What a reset must not change: policies, triggers, functions and bucket configuration. */
+const STRUCTURE_SQL = `select
+  (select count(*) from pg_policies where schemaname in ('public','storage'))::int as policies,
+  (select count(*) from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_namespace n on n.oid = c.relnamespace where not t.tgisinternal and t.tgenabled = 'O' and n.nspname = 'public')::int as enabled_triggers,
+  (select count(*) from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_namespace n on n.oid = c.relnamespace where not t.tgisinternal and t.tgenabled <> 'O' and n.nspname = 'public')::int as disabled_triggers,
+  (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity)::int as tables_without_rls,
+  (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname in ('public','private'))::int as functions,
+  (select md5(string_agg(id || public::text || coalesce(file_size_limit::text,'') || coalesce(allowed_mime_types::text,''), ',' order by id)) from storage.buckets) as buckets_hash`;
 
 async function main() {
   const env = loadEnvironment();
@@ -143,6 +153,7 @@ async function main() {
     return;
   }
 
+  const structureBefore = (await managementQuery<Record<string, unknown>[]>(target.ref, token, STRUCTURE_SQL))[0];
   let removedFiles = 0;
   console.log("\nDeleting storage files through the Storage API (as each reachable member)…");
   for (const account of file.accounts) {
@@ -174,10 +185,39 @@ async function main() {
   const after = await countsFor(target.ref, token);
   console.log("\nBefore / after:");
   console.table({ before, after });
+  const structureAfter = (await managementQuery<Record<string, unknown>[]>(target.ref, token, STRUCTURE_SQL))[0];
+  const unchanged = JSON.stringify(structureBefore) === JSON.stringify(structureAfter);
+  console.log(unchanged ? "Verified: policies, triggers, functions and buckets are unchanged; no trigger is disabled." : `WARNING: structure changed: ${JSON.stringify({ structureBefore, structureAfter })}`);
   const remaining = await managementQuery<{ email: string }[]>(
     target.ref,
     token,
     "select lower(email) as email from auth.users",
+  );
+  const structureText = unchanged
+    ? "Policies, enabled triggers, functions, RLS flags and bucket configuration are identical before and after; no trigger was disabled and no bypass was used."
+    : `**Changed, investigate:** ${JSON.stringify({ structureBefore, structureAfter })}`;
+  writeFileSync(
+    "DATABASE_RESET_REPORT.md",
+    [
+      "# Database reset report (medyra-dev)",
+      "",
+      `Run on ${new Date().toISOString()} by \`npm run db:reset:dev\`. Accounts remaining: ${remaining.length} (${keep.length} on the keep list). Deleted accounts: ${doomed.length}. Storage files removed through the Storage API: ${removedFiles}.`,
+      "",
+      "## Rows per table, before and after",
+      "",
+      "| Table | Before | After |",
+      "| --- | ---: | ---: |",
+      ...Object.keys(before).map((k) => `| ${k} | ${before[k]} | ${after[k]} |`),
+      "",
+      "## Structure check",
+      "",
+      structureText,
+      "",
+      "```json",
+      JSON.stringify({ structureBefore, structureAfter }, null, 1),
+      "```",
+      "",
+    ].join("\n"),
   );
   const stray = remaining.filter((r) => !keep.includes(r.email));
   console.log(

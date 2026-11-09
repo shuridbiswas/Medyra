@@ -35,6 +35,21 @@ If `accounts.json` is gone (for example after `seed:clean`), run `npm run seed:d
 
 All 50 accounts follow the same pattern: `seed+<username>@example.com`. The full list (name, language, city, role) is printed by `npm run seed:dev -- --dry-run`.
 
+## More personas (100 members now)
+
+| Persona | Username | Good for testing |
+| --- | --- | --- |
+| **Administrator** (also a nursing professor) | `andre_tremblay` | Granted through a row in `staff_roles`, inserted with SQL by the project owner (the only sanctioned path; it is not a profile flag). Admin pages need a confirmed two-step sign-in, so set `MFA_ENFORCEMENT=off` in `.env.local` for local development only; never weaken production. Holds the claimed and decided reports |
+| Suspended then restored member | `kimberly_ross` | Suspension, member notices, an appeal that was overturned |
+| Community owners and moderators | see `communities` in the app | Public and private communities, join requests, a ban, announcements |
+| Mentors (never students) | `rachid_mansouri`, `ghislaine_noel`, `hannah_goldstein`, `imane_cherkaoui`, `francoise_lemieux` | Mentor profiles, availability, pending, accepted, declined and completed mentorships, private feedback |
+| Mentees | members flagged looking-for-mentorship (for example `camille_lavoie`) | Open `/mentorship/requests` and `/mentorship/my-mentorships` to see requests in each state; accepted ones opened a conversation |
+| Anonymous forum writers | any member; roughly 15% of forum items | Anonymous questions, answers and replies (author shown as Anonymous) |
+| Student verification scenarios | the first ten completed seed accounts alphabetically | Ten fixtures labelled `[DEV TEST DATA]`: valid, email only, expired, rejected variants, revoked |
+| Restricted-profile members | six accounts, `profile_visibility = connections` | Details hidden from non-connections |
+
+Seven accounts never finished onboarding (`chloe_dubois`, `pascal_bergeron`, `alexis_martel`, `melodie_paquette`, `bao_tran`, `fabien_morissette`, `maxime_cloutier`).
+
 ## Not available
 
-These personas are **not provided because the product does not have the feature yet**: an administrator or moderator account, and a "verified" professional. There is no admin role, no verification process and no verification badge in the database, and the product forbids inventing badges before a real process exists.
+There is no professional (licence or employer) verification and no verification badge other than the student credential feature, so no such persona exists. The administrator is created only through `staff_roles`.

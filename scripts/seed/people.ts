@@ -32,7 +32,7 @@ const P = (
   field: string, flags = "", sub?: string, stage?: Person["stage"],
 ): Person => ({ slug, first, last, lang, g, city, role, field, flags, sub, stage });
 
-export const PEOPLE: Person[] = [
+const BASE: Person[] = [
   // Montréal (22)
   P("camille_lavoie", "Camille", "Lavoie", "fr", "f", "Montréal", "gr", "nursing", "hsa"),
   P("amira_benali", "Amira", "Benali", "fr", "f", "Montréal", "ug", "psychology", "s"),
@@ -95,6 +95,67 @@ export const PEOPLE: Person[] = [
   P("sophie_gagnon", "Sophie", "Gagnon", "fr", "f", "Québec", "ed", "social_work", "", undefined, "senior"),
   P("tanya_picard", "Tanya", "Picard", "en", "f", "Québec", "ind", "other", "", "nutri", "mid_career"),
 ];
+
+const MORE: Person[] = [
+  // Montréal (+28)
+  P("lina_bouzid", "Lina", "Bouzid", "fr", "f", "Montréal", "ug", "psychology"),
+  P("mathis_rousseau", "Mathis", "Rousseau", "fr", "m", "Montréal", "ug", "medicine", "s"),
+  P("nour_el_amin", "Nour", "El-Amin", "en", "f", "Montréal", "gr", "public_health"),
+  P("emmanuel_joseph", "Emmanuel", "Joseph", "fr", "m", "Montréal", "ug", "nursing", "s"),
+  P("valentina_rojas", "Valentina", "Rojas", "fr", "f", "Montréal", "gr", "speech_language_pathology"),
+  P("jason_li", "Jason", "Li", "en", "m", "Montréal", "ug", "pharmacy"),
+  P("sabrina_cormier", "Sabrina", "Cormier", "fr", "f", "Montréal", "hp", "nursing", "", undefined, "early_career"),
+  P("rachid_mansouri", "Rachid", "Mansouri", "fr", "m", "Montréal", "hp", "pharmacy", "m", undefined, "mid_career"),
+  P("clara_beaulieu", "Clara", "Beaulieu", "fr", "f", "Montréal", "hp", "occupational_therapy", "", undefined, "early_career"),
+  P("david_azoulay", "David", "Azoulay", "en", "m", "Montréal", "hp", "physiotherapy", "", undefined, "mid_career"),
+  P("ghislaine_noel", "Ghislaine", "Noël", "fr", "f", "Montréal", "sp", "social_work", "m", undefined, "mid_career"),
+  P("abdoulaye_sow", "Abdoulaye", "Sow", "fr", "m", "Montréal", "rg", "nursing", "s"),
+  P("hannah_goldstein", "Hannah", "Goldstein", "en", "f", "Montréal", "ed", "psychology", "m", undefined, "senior"),
+  P("pierre_luc_demers", "Pierre-Luc", "Demers", "fr", "m", "Montréal", "rs", "public_health", "", undefined, "early_career"),
+  P("leila_karimi", "Leila", "Karimi", "en", "f", "Montréal", "rs", "medicine", "", undefined, "mid_career"),
+  P("charles_vachon", "Charles", "Vachon", "fr", "m", "Montréal", "ind", "speech_language_pathology", "", undefined, "mid_career"),
+  P("imane_cherkaoui", "Imane", "Cherkaoui", "fr", "f", "Montréal", "ind", "social_work", "m", undefined, "mid_career"),
+  P("oliver_wright", "Oliver", "Wright", "en", "m", "Montréal", "hp", "other", "", "resp", "early_career"),
+  P("stephanie_leung", "Stephanie", "Leung", "en", "f", "Montréal", "gr", "audiology", "s"),
+  P("antoine_gervais", "Antoine", "Gervais", "fr", "m", "Montréal", "ug", "social_work"),
+  P("marwa_ben_salah", "Marwa", "Ben Salah", "fr", "f", "Montréal", "ug", "other", "q", "nutri"),
+  P("jean_philippe_cyr", "Jean-Philippe", "Cyr", "fr", "m", "Montréal", "gr", "nursing", "s"),
+  P("camila_torres", "Camila", "Torres", "fr", "f", "Montréal", "ug", "occupational_therapy", "s"),
+  P("bao_tran", "Bảo", "Trần", "en", "m", "Montréal", "ug", "psychology", "i"),
+  P("francoise_lemieux", "Françoise", "Lemieux", "fr", "f", "Montréal", "hp", "psychology", "m", undefined, "mid_career"),
+  P("yves_ladouceur", "Yves", "Ladouceur", "fr", "m", "Montréal", "ed", "pharmacy", "", undefined, "senior"),
+  P("kimberly_ross", "Kimberly", "Ross", "en", "f", "Montréal", "hp", "other", "q", "lab", "early_career"),
+  P("fabien_morissette", "Fabien", "Morissette", "fr", "m", "Montréal", "hp", "audiology", "i", undefined, "mid_career"),
+  // Laval (+6)
+  P("melissa_arsenault", "Mélissa", "Arsenault", "fr", "f", "Laval", "ug", "nursing"),
+  P("patrick_dionne", "Patrick", "Dionne", "fr", "m", "Laval", "hp", "physiotherapy", "", undefined, "mid_career"),
+  P("sandrine_gosselin", "Sandrine", "Gosselin", "fr", "f", "Laval", "gr", "psychology", "s"),
+  P("omar_el_khoury", "Omar", "El Khoury", "fr", "m", "Laval", "ed", "social_work", "", undefined, "senior"),
+  P("josianne_blais", "Josianne", "Blais", "fr", "f", "Laval", "rs", "nursing", "", undefined, "mid_career"),
+  P("martin_perreault", "Martin", "Perreault", "fr", "m", "Laval", "ind", "occupational_therapy", "", undefined, "mid_career"),
+  // Longueuil (+5)
+  P("audrey_trottier", "Audrey", "Trottier", "fr", "f", "Longueuil", "ug", "pharmacy"),
+  P("mohammed_tahiri", "Mohammed", "Tahiri", "fr", "m", "Longueuil", "hp", "nursing", "", undefined, "mid_career"),
+  P("kateri_deschamps", "Kateri", "Deschamps", "fr", "f", "Longueuil", "sp", "social_work", "", undefined, "early_career"),
+  P("benoit_lalonde", "Benoît", "Lalonde", "fr", "m", "Longueuil", "rg", "physiotherapy", "s"),
+  P("elena_petrova", "Elena", "Petrova", "en", "f", "Longueuil", "gr", "social_work"),
+  // Brossard (+2), Châteauguay (+2), Terrebonne (+2), Saint-Jérôme (+1), Vaudreuil-Dorion (+1)
+  P("jessica_wong", "Jessica", "Wong", "en", "f", "Brossard", "ug", "nursing"),
+  P("samir_belhadj", "Samir", "Belhadj", "fr", "m", "Brossard", "hp", "pharmacy", "", undefined, "early_career"),
+  P("vanessa_dube", "Vanessa", "Dubé", "fr", "f", "Châteauguay", "hp", "nursing", "", undefined, "mid_career"),
+  P("louis_philippe_gagne", "Louis-Philippe", "Gagné", "fr", "m", "Châteauguay", "ug", "psychology"),
+  P("emilie_hebert", "Émilie", "Hébert", "fr", "f", "Terrebonne", "gr", "occupational_therapy"),
+  P("maxime_cloutier", "Maxime", "Cloutier", "fr", "m", "Terrebonne", "hp", "physiotherapy", "i", undefined, "early_career"),
+  P("gabrielle_lauzon", "Gabrielle", "Lauzon", "fr", "f", "Saint-Jérôme", "hp", "psychology", "", undefined, "early_career"),
+  P("nicholas_brown", "Nicholas", "Brown", "en", "m", "Vaudreuil-Dorion", "hp", "medicine", "", undefined, "mid_career"),
+  // Sherbrooke (+2), Québec (+1)
+  P("amelie_fecteau", "Amélie", "Fecteau", "fr", "f", "Sherbrooke", "gr", "public_health"),
+  P("raphael_dufour", "Raphaël", "Dufour", "fr", "m", "Sherbrooke", "rs", "psychology", "", undefined, "early_career"),
+  P("genevieve_lavallee", "Geneviève", "Lavallée", "fr", "f", "Québec", "hp", "nursing", "", undefined, "mid_career"),
+];
+
+/** 100 fictional members. The first 50 are the original cast; the rest widen every role and region. */
+export const PEOPLE: Person[] = [...BASE, ...MORE];
 
 export const CITY_LABEL: Record<City, string> = {
   "Montréal": "Montréal, QC",

@@ -1,51 +1,56 @@
 # Test data report (medyra-dev)
 
-Status: **verified.** Rows were inserted and checked by `npm run seed:verify` (48 of 48 checks passed, run twice: after the first seed and again after `seed:clean` and a reseed). The data below is the state of medyra-dev after the reseed.
+Generated from the live database after the reset and reseed on 2026-11-08. All people are fictional; real institutions and employers appear only as academic or geographic context. See [DATA_VALIDATION_REPORT.md](DATA_VALIDATION_REPORT.md) for what was verified and what is still open.
 
-## What was inserted (database counts equal the plan)
+## What is in the database (live counts)
 
-| Item | Count |
-| --- | --- |
-| Accounts | 50 (46 completed onboarding, 4 left incomplete) |
-| Members by role | 18 students, 17 professionals, 5 educators, 5 researchers, 5 independent |
-| Members by city | Montréal 22, Laval 6, Longueuil 5, Châteauguay 3, Brossard 3, Terrebonne 2, Repentigny 2, Saint-Jérôme 2, Vaudreuil-Dorion 2, Sherbrooke 1, Québec 2 |
-| Members by language | French 34, English 16 |
-| Open to mentor / looking for a mentor | 7 / 10 |
-| Education / experience / skill rows | 102 / 85 / 322 |
-| Images | 50 (32 avatars, 18 covers) |
-| Posts | 250: 70 questions and 30 in each of the other six categories |
-| Posts by language | French 163, English 87 |
-| Comments | 400 (French 260, English 140) |
-| Likes | 600 |
-| Connections | 40 (30 accepted, 10 pending) |
-| Follows | 60 |
+| Area | Table | Rows |
+| --- | --- | ---: |
+| Members | profiles (93 completed onboarding, 7 incomplete, plus the kept account) | 101 |
+| | profile_education / profile_experience / profile_skills | 204 / 173 / 636 |
+| | avatars and covers uploaded (Storage API) | 65 / 37 |
+| Feed | posts (300 feed + 45 community posts) | 345 |
+| | post_comments / post_likes | 600 / 1500 |
+| | saved_items | 160 |
+| Network | connections (80 accepted, 30 pending) / follows | 110 / 90 |
+| | member_blocks / member_mutes | 3 / 3 |
+| Forums | forum_questions / answers / replies | 120 / 172 / 99 |
+| | forum_votes / forum_follows | 400 / 150 |
+| Communities | communities (4 private) / members | 20 / 365 |
+| | announcements / join requests / bans | 16 / 8 / 2 |
+| Mentorship | mentor_profiles / availability windows | 16 / 32 |
+| | requests (9 pending, 15 accepted, 6 declined) / mentorships / feedback | 30 / 15 / 4 |
+| Messaging | conversations (23 direct, 3 groups, 15 from accepted mentorships) / messages | 41 / 189 |
+| Safety | reports (4 open, 3 claimed, the rest decided) / member_notices / appeals | 15 / 5 / 1 |
+| Verification | requests / credentials (dev fixtures) | 10 / 4 |
+| Privacy | consent_records / data_requests (pending, not executed) | 279 / 2 |
+| Notifications | created by the database triggers from the actions above | 3093 |
 
-## Checks that passed (`seed:verify`)
+## Members
 
-Counts per table match the plan; no orphan rows or duplicate usernames; another member can read but not edit or delete a member's posts or comments, and cannot publish as them; incomplete profiles are hidden; anonymous access is blocked on profiles, posts, comments, likes, connections and follows; pending connections stay private; pagination returns 15, 15, 15, 1 for the member with 46 posts, with no duplicates; search works with and without accents; avatar loads. `npm run lint`, `typecheck`, `test` (538 tests) and `build` also passed.
+- **By role:** 38 students, 37 working professionals, 8 educators, 9 researchers, 8 independent practitioners.
+- **By region (location_label, general only):** Montréal 50, Laval 12, Longueuil 10, Châteauguay 5, Brossard 5, Terrebonne 4, Saint-Jérôme 3, Vaudreuil-Dorion 3, Sherbrooke 3, Québec 3, Repentigny 2.
+- **By language:** 72 French, 28 English. Posts: 210 French, 90 English (70/30). Comments: 420 / 180. Forum questions: 84 / 36.
+- **Mentorship flags:** 12 open to mentor, 18 looking for a mentor. 16 mentor profiles (never students).
+- **Privacy:** 6 profiles restricted to connections, 5 hidden from the directory.
 
-## Not supported by the schema (not seeded)
+## Feed
 
-Verification or badges, communities, mentorship-matching records, an admin role, a separate forum, threaded replies (`post_comments` has no parent column).
+300 feed posts: Questions 70, and 38 or 39 in each of the other six categories. Includes one post of exactly 3000 characters, a 46-post heavy poster (pagination), posts with `<`, `>`, `&`, quotes and emoji, 8% edited posts, and members who never post.
 
-## Reviewed in the real app (signed in as the kept account, desktop and 375 px mobile)
+## Forums
 
-- Home feed: French and English posts render with correct accents; category chips, like and comment counts show.
-- A post containing `<`, `>`, `&`, quotes, « » and emoji renders as plain text (escaped correctly).
-- The 3000-character post renders in full and ends with an ellipsis; no horizontal scroll.
-- Profile pages: education (CEGEP, bachelor, master's), experience, skills, interests and mentorship areas show; the member with a 52-character first name and a 1000-character bio fits at mobile width; a member who never posted has an empty Posts tab; the mobile tab bar appears.
-- Found and fixed in the generator: a working pharmacist was posting student-placement text. Posts on placement, exam-preparation and clinical-training themes now come only from students and recent graduates (when any exist for that field). The data was cleaned and reseeded after the fix.
+19 anonymous questions, 30 anonymous answers and 14 anonymous replies, all created through `ask_question`, `post_answer` and `post_reply`, so `author_id` is NULL and the writer exists only in `forum_identity`. 50 accepted answers.
 
-## `seed:clean` round trip
+## Not seeded (not built or out of scope)
 
-`seed:clean` removed 50 seed accounts and 50 images (0 left over). `shurid.biswas@gmail.com` still existed with its profile (`seed:wipe` preview showed 1 account on the keep list, 0 to delete). Then `seed:dev` recreated everything.
+Professional verification or badges (only the student credential feature exists), jobs and careers, events, articles, and push or email delivery. No call was made to Resend, Sentry, ProductBridge, Pinecone or Upstash.
 
 ## Known issues
 
-- Member search uses plain `ilike`, so it is not accent-insensitive. Typing "levesque" still finds "Lévesque" through the ASCII username, but a surname that differs from the username would not match. Fixing it needs a schema change (for example `unaccent`), which was not made.
-- Search now lives at `/network` (the other session's uncommitted work); the checks here used the same filters over the API.
-- Seeding fires the notification triggers; seeded notifications are backdated and old ones marked read.
-- The network migration (`20261101000001`) was applied to medyra-dev. It belongs to the other session's work, which is still uncommitted.
-- French first-person agreement is adjusted by a word list, so a rare phrase may keep the wrong gender form.
-- The Next.js dev overlay showed "1 Issue" on a profile page; it was not investigated.
-- Not tested live: dark mode, keyboard navigation, and the other 40+ profiles individually.
+- Interrupted runs left append-only rows that cannot be deleted: `moderation_actions` (31 in total) and `audit_logs` (72 in total, of which about 52 are from discarded attempts and have no actor). They are harmless but inflate the totals.
+- Deleting accounts also writes 16 extra `community_audit_logs` rows (membership removals); they carry no actor.
+- Feed, forum and community text reuse the same hand-written sentence pools in different combinations. Within each surface there are no duplicate or near-duplicate bodies; across surfaces some sentences repeat.
+- 7 members are incomplete (not the 8 requested), 93 are complete.
+- Member search is still plain `ilike` (not accent-insensitive); fixing it needs a schema change.
+- Fixed during this work: `audit_logs` blocked account deletion (new migration `20261106000001_audit_log_account_deletion.sql`, applied to dev, covered by `supabase/tests/audit-log-deletion.test.ts`).

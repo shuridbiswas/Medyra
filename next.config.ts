@@ -22,6 +22,10 @@ const securityHeaders = [
   },
 ];
 
+// Anything that is not production (previews, the dev deployment) must stay out of search engines.
+const noIndex =
+  process.env.NEXT_PUBLIC_APP_ENV === "production" ? [] : [{ key: "X-Robots-Tag", value: "noindex, nofollow" }];
+
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
@@ -33,7 +37,7 @@ const nextConfig: NextConfig = {
     return [{ source: "/home", destination: "/", permanent: false }];
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [{ source: "/:path*", headers: [...securityHeaders, ...noIndex] }];
   },
   turbopack: {
     rules: {

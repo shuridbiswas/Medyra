@@ -51,3 +51,4 @@ supabase/.branches/
 
 # Dev seed output (contains generated passwords)
 scripts/.seed-output/
+scripts/.backup/

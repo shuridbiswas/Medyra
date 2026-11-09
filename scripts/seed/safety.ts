@@ -34,6 +34,13 @@ export function assertDevOnly(env: SeedEnv): SeedTarget {
       "Set SEED_ALLOWED_PROJECT_REF in .env.local to the id of the DEVELOPMENT Supabase project.",
     );
   }
+  if (env.NEXT_PUBLIC_APP_ENV === "production") {
+    throw new SeedSafetyError("NEXT_PUBLIC_APP_ENV is production. Refusing to run.");
+  }
+  const protectedRefs = (env.SEED_PROTECTED_PROJECT_REFS ?? "").split(",").map((r) => r.trim()).filter(Boolean);
+  if (protectedRefs.includes(match[1])) {
+    throw new SeedSafetyError("This project is on the protected list (SEED_PROTECTED_PROJECT_REFS). Refusing to run.");
+  }
   if (match[1] !== allowed) {
     throw new SeedSafetyError(
       "The configured Supabase project is not the one in SEED_ALLOWED_PROJECT_REF. Refusing to seed it.",

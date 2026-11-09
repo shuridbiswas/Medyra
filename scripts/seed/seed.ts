@@ -17,6 +17,8 @@ import {
   type Session,
   type StoredAccount,
 } from "./api.ts";
+import { spawnSync } from "node:child_process";
+import { buildModules, runModules, validateModules } from "./modules.ts";
 import { buildPlan, describePlan, validatePlan, type SeedMember } from "./plan.ts";
 import { avatarPng, coverPng } from "./png.ts";
 import { assertDevOnly, loadEnvironment, requireManagementToken, SeedSafetyError } from "./safety.ts";
@@ -63,6 +65,16 @@ async function main() {
   }
 
   const token = requireManagementToken(env);
+
+  // Resume after an interrupted run without signing 100 accounts in again (sign-in is rate limited).
+  if (process.argv.includes("--modules-only")) {
+    const rows = await managementQuery<{ id: string; email: string }[]>(target.ref, token, "select id, lower(email) as email from auth.users where email like 'seed+%@example.com'");
+    const byEmail = new Map(rows.map((r) => [r.email, r.id]));
+    const ids = new Map(plan.members.map((m) => [m.slug, byEmail.get(m.email)!]));
+    if (plan.members.some((m) => !ids.get(m.slug))) throw new Error("Some seed accounts are missing. Run the full seed first.");
+    console.table(await runModules({ ref: target.ref, token, ids, mod: buildModules(plan, now), plan, log }));
+    return;
+  }
 
   // ---------------------------------------------------------------------------- 1. accounts
   log("\n1/4 Creating accounts through the Auth API (existing seed accounts are reused)…");
@@ -154,6 +166,15 @@ async function main() {
   await managementQuery(target.ref, token, TIDY_NOTIFICATIONS_SQL);
 
   // ---------------------------------------------------------------------------- 4. summary
+  log("\n3b/4 Communities, forums, mentorship, messaging, moderation (real database functions, backdated)…");
+  const modules = buildModules(plan, now);
+  const moduleProblems = validateModules(modules);
+  if (moduleProblems.length > 0) throw new Error(`Module plan breaks database rules:\n- ${moduleProblems.slice(0, 10).join("\n- ")}`);
+  console.table(await runModules({ ref: target.ref, token, ids, mod: modules, plan, log }));
+  log("  student verification scenarios (dev fixtures labelled [DEV TEST DATA])…");
+  const fixtures = spawnSync(process.execPath, ["--disable-warning=MODULE_TYPELESS_PACKAGE_JSON", "scripts/seed/verification.ts"], { env: process.env, encoding: "utf8" });
+  log(fixtures.status === 0 ? `  ${fixtures.stdout.split("\n")[0]}` : `  verification fixtures skipped: ${(fixtures.stderr || fixtures.stdout).slice(0, 200)}`);
+
   log("\n4/4 Row counts in the database for seed accounts:");
   const counts = await managementQuery<Record<string, number>[]>(target.ref, token, COUNT_SQL);
   console.table(counts);

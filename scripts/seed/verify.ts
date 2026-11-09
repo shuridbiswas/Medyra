@@ -4,6 +4,7 @@
  *   npm run seed:verify
  */
 import { memberClient, readAccounts, signIn } from "./api.ts";
+import { buildModules } from "./modules.ts";
 import { buildPlan, describePlan, HEAVY_POSTER } from "./plan.ts";
 import { assertDevOnly, loadEnvironment, requireManagementToken, SeedSafetyError } from "./safety.ts";
 import { COUNT_SQL, managementQuery } from "./sql.ts";
@@ -24,6 +25,7 @@ async function main() {
   const token = requireManagementToken(env);
   const plan = buildPlan();
   const summary = describePlan(plan);
+  const modules = buildModules(plan, new Date());
 
   // --- 1. counts match the plan -------------------------------------------------------------
   const [counts] = await managementQuery<Record<string, number>[]>(target.ref, token, COUNT_SQL);
@@ -34,7 +36,7 @@ async function main() {
     education: summary.education,
     experience: summary.experience,
     tags: summary.tags,
-    posts: plan.posts.length,
+    posts: plan.posts.length + modules.communityPosts.length,
     comments: plan.comments.length,
     likes: plan.likes.length,
     connections: plan.connections.length,
@@ -51,7 +53,32 @@ async function main() {
     `select count(*)::int as n from public.posts p join auth.users u on u.id = p.author_id
       where u.email like 'seed+%@example.com' and p.category = 'questions'`,
   );
-  check(`questions: database ${questions.n} = plan ${summary.questions}`, questions.n === summary.questions);
+  const expectedQuestions = summary.questions + modules.communityPosts.filter((p) => p.category === "questions").length;
+  check(`question posts (feed + community): database ${questions.n} = plan ${expectedQuestions}`, questions.n === expectedQuestions);
+
+  // --- 1b. module counts (a reply may have been removed by the staff decision) ---------------------
+  const [mc] = await managementQuery<Record<string, number>[]>(
+    target.ref,
+    token,
+    `select (select count(*) from public.communities where slug like 'seed-%')::int communities,
+       (select count(*) from public.community_members m join public.communities c on c.id = m.community_id where c.slug like 'seed-%')::int community_members,
+       (select count(*) from public.forum_questions)::int questions, (select count(*) from public.forum_answers)::int answers,
+       (select count(*) from public.forum_replies)::int replies, (select count(*) from public.forum_votes)::int votes,
+       (select count(*) from public.mentor_profiles)::int mentors, (select count(*) from public.mentorship_requests)::int mentor_requests,
+       (select count(*) from public.mentorships)::int mentorships, (select count(*) from public.conversations)::int conversations,
+       (select count(*) from public.messages)::int messages, (select count(*) from public.reports)::int reports,
+       (select count(*) from public.audit_logs)::int audit_rows, (select count(*) from public.student_verified_credentials)::int credentials`,
+  );
+  console.log(`  module counts: ${JSON.stringify(mc)}`);
+  check("communities: database = plan", mc.communities === modules.communities.length, `${mc.communities}`);
+  check("forum questions: database = plan", mc.questions === modules.forumQuestions.length, `${mc.questions}`);
+  check("forum answers: database = plan", mc.answers === modules.forumAnswers.length, `${mc.answers}`);
+  check("forum replies: plan minus at most one removed by staff", mc.replies >= modules.forumReplies.length - 1 && mc.replies <= modules.forumReplies.length, `${mc.replies}`);
+  check("mentor profiles: database = plan", mc.mentors === modules.mentors.length, `${mc.mentors}`);
+  check("mentorship requests: database = plan", mc.mentor_requests === modules.mentorRequests.length, `${mc.mentor_requests}`);
+  check("conversations created (direct + groups + accepted mentorships)", mc.conversations >= modules.dms.length + modules.groups.length, `${mc.conversations}`);
+  check("staff actions wrote audit rows through the functions", mc.audit_rows > 0, `${mc.audit_rows}`);
+  check("student verification credentials exist (dev fixtures)", mc.credentials > 0, `${mc.credentials}`);
 
   // --- 2. integrity: orphans and duplicates --------------------------------------------------
   const [integrity] = await managementQuery<Record<string, number>[]>(
@@ -135,6 +162,32 @@ async function main() {
     params: { select: "id", onboarding_completed: "eq.false" },
   });
   check("B cannot list any incomplete profile", listed.status === 200 && listed.json.length === 0, `${listed.json.length} visible`);
+
+  // Anonymity, private communities and private messages as another member.
+  const anonQ = await B.rest<{ author_id: string | null }[]>("GET", "forum_questions", { params: { is_anonymous: "eq.true", select: "author_id", limit: "1000" } });
+  check("anonymous questions expose no author (author_id is null for every row)", anonQ.status === 200 && anonQ.json.length > 0 && anonQ.json.every((r) => r.author_id === null), `${anonQ.json.length} rows`);
+  const identity = await B.rest<{ author_id: string }[]>("GET", "forum_identity", { params: { select: "author_id", limit: "1000" } });
+  check("forum_identity shows a member only their own rows", identity.status === 200 && identity.json.every((r) => r.author_id === bSession.id), `${identity.json.length} rows`);
+  const privateCommunity = modules.communities.find((c) => c.visibility === "private" && !c.members.includes(OTHER_MEMBER) && c.owner !== OTHER_MEMBER && !c.moderators.includes(OTHER_MEMBER));
+  if (privateCommunity) {
+    const hiddenPosts = await B.rest<unknown[]>("GET", "posts", {
+      params: { select: "id", community_id: `eq.${(await managementQuery<{ id: string }[]>(target.ref, token, `select id from public.communities where slug = '${privateCommunity.slug}'`))[0].id}` },
+    });
+    check(`posts of the private community ${privateCommunity.slug} are invisible to a non-member`, hiddenPosts.status === 200 && hiddenPosts.json.length === 0, `${hiddenPosts.json.length} visible`);
+  }
+  const mine = await B.rest<{ id: string }[]>("GET", "messages", { params: { select: "id", limit: "5000" } });
+  const [expectedMine] = await managementQuery<{ n: number }[]>(
+    target.ref, token,
+    `select count(*)::int n from public.messages m where exists (select 1 from public.conversation_participants p where p.conversation_id = m.conversation_id and p.user_id = '${bSession.id}' and p.status <> 'declined')`,
+  );
+  check("messages: a member sees only messages from their own conversations", mine.status === 200 && mine.json.length === expectedMine.n, `${mine.json.length} vs ${expectedMine.n}`);
+  const restrictedSlug = modules.restricted.find((slug) => !plan.connections.some((c) => c.status === "accepted" && [c.requesterSlug, c.addresseeSlug].includes(slug) && [c.requesterSlug, c.addresseeSlug].includes(OTHER_MEMBER)) && slug !== OTHER_MEMBER);
+  const restricted = restrictedSlug ? find(restrictedSlug) : undefined;
+  if (restricted) {
+    const rid = (await managementQuery<{ id: string }[]>(target.ref, token, `select id from auth.users where email = '${restricted.email}'`))[0].id;
+    const edu = await B.rest<unknown[]>("GET", "profile_education", { params: { profile_id: `eq.${rid}`, select: "id" } });
+    check(`restricted profile (${restrictedSlug}): education hidden from a non-connection`, edu.status === 200 && edu.json.length === 0, `${edu.json.length} rows`);
+  }
 
   // Anonymous access is blocked.
   for (const table of ["profiles", "posts", "post_comments", "post_likes", "connections", "follows"]) {
