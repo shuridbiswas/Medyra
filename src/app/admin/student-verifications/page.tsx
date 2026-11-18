@@ -5,6 +5,8 @@ import { AppPage } from "@/components/layout/app-page";
 import { Button } from "@/components/ui/button";
 import { controlClass, labelClass, textareaClass } from "@/components/forms/controls";
 import { requireAdmin } from "@/lib/auth/session";
+import { AdminProviderPanel } from "@/features/verification/components/provider-panels";
+import { listProviderAttempts } from "@/features/verification/queries";
 import { cn } from "@/lib/utils";
 import { AdminNav, AdminNotice } from "@/features/admin/components/admin-nav";
 import { METHOD_LABEL, REASON_LABEL, STATUS_LABEL, text } from "@/features/student-verification/content";
@@ -150,6 +152,12 @@ async function Content({ searchParams }: Props) {
             {detail.request.status === "SUBMITTED" ? (
               <form action={claimVerification}><Hidden id={detail.request.id} /><Button type="submit">Start review</Button></form>
             ) : null}
+
+            <AdminProviderPanel
+              requestId={detail.request.id}
+              status={detail.request.status}
+              attempts={await listProviderAttempts(detail.request.id)}
+            />
 
             <div>
               <h3 className="text-sm font-semibold text-maroon-900">Evidence</h3>

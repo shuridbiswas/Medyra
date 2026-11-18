@@ -2,6 +2,7 @@
 
 import { createHash } from "node:crypto";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
@@ -11,28 +12,44 @@ import { reportError } from "@/lib/monitoring/report";
 import { decideProof } from "@/features/verification/providers/policy";
 import { createSheerIdVerification, fetchSheerIdDetails, normalizeSheerId, sheerIdHostedUrl } from "@/features/verification/providers/sheerid";
 import { simulatedProof } from "@/features/verification/providers/simulated";
-import type { ClaimType, NormalizedProof, ProviderConfig, ProviderKey, VerificationEnv } from "@/features/verification/providers/types";
+import type { ClaimType, NormalizedProof, ProviderConfig, ProviderKey } from "@/features/verification/providers/types";
+import { liveProvidersEnabled, verificationEnv } from "@/features/verification/queries";
 
 /**
- * Provider-based verification. Disabled by default: a provider must be approved in
- * verification_provider_configs AND VERIFICATION_LIVE_PROVIDERS_ENABLED=true. A member can only start
- * an attempt. The result is fetched from the provider by an administrator's action and recorded by
- * a database function that only administrators can call; nothing here issues a credential.
+ * Provider-based verification, off unless a provider is approved in verification_provider_configs AND
+ * switched on for this environment. Members can only start, retry and cancel attempts. A result is
+ * recorded by the webhook's trusted writer or by an administrator's check; neither issues a credential.
+ * Approval stays with the existing reviewer flow (approve_verification).
  */
-export type ProviderResult = { ok: true; message: string } | { ok: false; error: string };
-
 const uuid = z.string().uuid();
-const db = async () => (await createClient()) as unknown as SupabaseClient;
-const verificationEnv = (): VerificationEnv => {
-  const v = process.env.VERIFICATION_ENV;
-  return v === "production" || v === "staging" ? v : "development";
+const str = (fd: FormData, key: string) => {
+  const v = fd.get(key);
+  return typeof v === "string" ? v : "";
 };
-const liveEnabled = () => process.env.VERIFICATION_LIVE_PROVIDERS_ENABLED === "true";
+const db = async () => (await createClient()) as unknown as SupabaseClient;
+const UNAVAILABLE = "That verification provider is not available.";
+
 const sheerIdEnv = () => {
   const programId = process.env.SHEERID_PROGRAM_ID;
   const token = process.env.SHEERID_ACCESS_TOKEN;
   return process.env.SHEERID_ENABLED === "true" && programId && token ? { programId, token } : null;
 };
+
+function memberBack(requestId: string | null, kind: "notice" | "error", message: string): never {
+  const q = new URLSearchParams();
+  if (requestId) q.set("request", requestId);
+  q.set(kind, message.slice(0, 200));
+  revalidatePath("/verification", "layout");
+  redirect(`/verification/student?${q.toString()}`);
+}
+
+function adminBack(requestId: string | null, kind: "notice" | "error", message: string): never {
+  const q = new URLSearchParams({ tab: "review" });
+  if (requestId) q.set("request", requestId);
+  q.set(kind, message.slice(0, 200));
+  revalidatePath("/admin/student-verifications");
+  redirect(`/admin/student-verifications?${q.toString()}`);
+}
 
 async function loadConfig(supabase: SupabaseClient, provider: ProviderKey): Promise<ProviderConfig | null> {
   const { data } = await supabase.from("verification_provider_configs").select("*").eq("provider", provider).maybeSingle();
@@ -40,90 +57,126 @@ async function loadConfig(supabase: SupabaseClient, provider: ProviderKey): Prom
   return { provider, enabled: data.enabled, environment: data.environment, contractState: data.contract_state, claims: data.claims };
 }
 
-/** Member: start an attempt. Returns the provider URL for the browser to open, or an error. */
-export async function beginProviderAttempt(institutionId: string, provider: "sheerid" | "simulated"): Promise<ProviderResult> {
+/** Member: start (or retry) provider verification. Creates the request if needed, then an attempt. */
+export async function startProviderVerification(formData: FormData): Promise<void> {
   const { user } = await requireMember();
-  if (!uuid.safeParse(institutionId).success) return { ok: false, error: "Unknown institution." };
+  const institutionId = str(formData, "institutionId");
+  const provider = str(formData, "provider") as ProviderKey;
+  const existing = str(formData, "requestId");
+  const known = uuid.safeParse(existing).success ? existing : null;
+  if (!uuid.safeParse(institutionId).success || (provider !== "sheerid" && provider !== "simulated")) memberBack(known, "error", UNAVAILABLE);
   const limited = await checkRateLimit("verification", user.id);
-  if (!limited.ok) return { ok: false, error: limited.message };
+  if (!limited.ok) memberBack(known, "error", limited.message);
   const env = verificationEnv();
   // The simulator can never run in production, whatever the database says.
-  if (provider === "simulated" && env === "production") return { ok: false, error: "That verification provider is not available." };
-  if (provider !== "simulated" && !liveEnabled()) return { ok: false, error: "That verification provider is not available." };
+  if (provider === "simulated" && env === "production") memberBack(known, "error", UNAVAILABLE);
+  if (provider === "sheerid" && !liveProvidersEnabled()) memberBack(known, "error", UNAVAILABLE);
 
   const supabase = await db();
   const config = await loadConfig(supabase, provider);
-  if (!config || !config.enabled || config.environment !== env) return { ok: false, error: "That verification provider is not available." };
+  if (!config || !config.enabled || config.environment !== env) memberBack(known, "error", UNAVAILABLE);
+
+  const { data: requestId, error: requestError } = await supabase.rpc("start_provider_request", { p_institution: institutionId });
+  if (requestError || typeof requestId !== "string") memberBack(known, "error", requestError?.message.slice(0, 160) ?? "Could not start verification.");
 
   let providerAttemptId: string | null = null;
   let redirectTo: string | null = null;
   if (provider === "sheerid") {
     const sheer = sheerIdEnv();
-    if (!sheer) return { ok: false, error: "That verification provider is not available." };
+    if (!sheer) memberBack(requestId, "error", UNAVAILABLE);
     try {
       providerAttemptId = await createSheerIdVerification(sheer);
       redirectTo = sheerIdHostedUrl(sheer.programId, providerAttemptId);
     } catch (error) {
       reportError("verification.sheerid_create", error);
-      return { ok: false, error: "The verification provider is unavailable right now. Please try again later." };
+      memberBack(requestId, "error", "The verification provider is unavailable right now. Please try again later.");
     }
   }
-  const { data, error } = await supabase.rpc("start_provider_attempt", {
-    p_institution: institutionId, p_provider: provider, p_claim: "CURRENT_STUDENT", p_provider_attempt_id: providerAttemptId,
+  const { data: attemptId, error } = await supabase.rpc("start_provider_attempt", {
+    p_request: requestId, p_provider: provider, p_provider_attempt_id: providerAttemptId,
   });
-  if (error || typeof data !== "string") return { ok: false, error: error?.message.slice(0, 160) ?? "Could not start verification." };
-  await supabase.rpc("set_attempt_progress", { p_attempt: data, p_state: "redirected" });
+  if (error || typeof attemptId !== "string") memberBack(requestId, "error", error?.message.slice(0, 160) ?? "Could not start verification.");
+  await supabase.rpc("set_attempt_progress", { p_attempt: attemptId, p_state: "redirected" });
   if (redirectTo) redirect(redirectTo);
-  return { ok: true, message: "Attempt started." };
+  memberBack(requestId, "notice", "Verification started.");
+}
+
+/** Member: cancel an open attempt. History is kept. */
+export async function cancelProviderAttempt(formData: FormData): Promise<void> {
+  const { user } = await requireMember();
+  const attemptId = str(formData, "attemptId");
+  const requestId = str(formData, "requestId");
+  const known = uuid.safeParse(requestId).success ? requestId : null;
+  if (!uuid.safeParse(attemptId).success) memberBack(known, "error", "Unknown attempt.");
+  const limited = await checkRateLimit("verification", user.id);
+  if (!limited.ok) memberBack(known, "error", limited.message);
+  const { error } = await (await db()).rpc("set_attempt_progress", { p_attempt: attemptId, p_state: "cancelled" });
+  if (error) memberBack(known, "error", "That attempt cannot be cancelled.");
+  memberBack(known, "notice", "Attempt cancelled.");
 }
 
 /**
- * Administrator: fetch the provider's authoritative result for an attempt, apply the policy and
- * record the outcome. Safe to repeat: the same provider answer produces the same event hash.
+ * Administrator: fetch the provider's authoritative result for one attempt (the simulator in
+ * development), apply the policy and record it. Safe to repeat.
  */
-export async function confirmProviderAttempt(attemptId: string, simulatedKind: "student" | "member" | "no_link" = "student"): Promise<ProviderResult> {
+export async function checkProviderAttempt(formData: FormData): Promise<void> {
   const { user } = await requireAdmin();
-  if (!uuid.safeParse(attemptId).success) return { ok: false, error: "Unknown attempt." };
+  const attemptId = str(formData, "attemptId");
+  const requestId = str(formData, "requestId");
+  const known = uuid.safeParse(requestId).success ? requestId : null;
+  if (!uuid.safeParse(attemptId).success) adminBack(known, "error", "Unknown attempt.");
   const limited = await checkRateLimit("api", user.id);
-  if (!limited.ok) return { ok: false, error: limited.message };
+  if (!limited.ok) adminBack(known, "error", limited.message);
+  const kindRaw = str(formData, "simulate");
+  const kind = kindRaw === "member" || kindRaw === "no_link" ? kindRaw : "student";
   const env = verificationEnv();
   const supabase = await db();
   const { data: attempt } = await supabase
-    .from("verification_attempts")
-    .select("id, provider, claim_type, provider_attempt_id")
-    .eq("id", attemptId)
-    .maybeSingle();
-  if (!attempt) return { ok: false, error: "Unknown attempt." };
+    .from("verification_attempts").select("id, provider, claim_type, provider_attempt_id").eq("id", attemptId).maybeSingle();
+  if (!attempt) adminBack(known, "error", "Unknown attempt.");
   const provider = attempt.provider as ProviderKey;
   const config = await loadConfig(supabase, provider);
-  if (!config) return { ok: false, error: "Provider not configured." };
+  if (!config) adminBack(known, "error", "Provider not configured.");
 
   let proof: NormalizedProof;
   try {
     if (provider === "simulated") {
-      if (env === "production") return { ok: false, error: "The simulator is disabled in production." };
-      proof = simulatedProof(attempt.id, simulatedKind);
+      if (env === "production") adminBack(known, "error", "The simulator is disabled in production.");
+      proof = simulatedProof(attempt.id, kind);
     } else if (provider === "sheerid") {
       const sheer = sheerIdEnv();
-      if (!sheer || !liveEnabled() || !attempt.provider_attempt_id) return { ok: false, error: "That provider is not configured." };
+      if (!sheer || !liveProvidersEnabled() || !attempt.provider_attempt_id) adminBack(known, "error", "That provider is not configured.");
       const details = await fetchSheerIdDetails(sheer, attempt.provider_attempt_id);
       proof = normalizeSheerId(details, { verificationId: attempt.provider_attempt_id, now: new Date(), testMode: config.contractState !== "live" });
     } else {
-      return { ok: false, error: "No adapter is implemented for that provider yet." };
+      adminBack(known, "error", "No adapter is implemented for that provider yet.");
     }
   } catch (error) {
+    // redirect() throws a control-flow error; let it through untouched.
+    if (error && typeof error === "object" && "digest" in error) throw error;
     reportError("verification.provider_fetch", error);
-    return { ok: false, error: "The provider could not be reached. Nothing was recorded." };
+    adminBack(known, "error", "The provider could not be reached. Nothing was recorded.");
   }
 
   const decision = decideProof(proof, { requested: attempt.claim_type as ClaimType, config, env });
-  // Same provider answer -> same hash, so a repeat is a no-op in the database.
-  const eventHash = createHash("sha256").update(`${provider}|${attempt.id}|${proof.outcome}|${decision.state}|${decision.reason}`).digest("hex");
+  const hash = createHash("sha256").update([provider, attempt.id, proof.outcome, decision.state, decision.reason].join("|")).digest("hex");
   const { error } = await supabase.rpc("record_provider_result", {
-    p_attempt: attempt.id, p_event_hash: eventHash, p_outcome: proof.outcome, p_state: decision.state,
+    p_attempt: attempt.id, p_event_hash: hash, p_outcome: proof.outcome, p_state: decision.state,
     p_linkage: proof.accountLinkage, p_issuer_validated: proof.issuerValidated, p_valid_until: proof.validUntil ?? null,
     p_subject_hash: proof.providerSubjectHash ?? null, p_digest: proof.evidenceDigest ?? null,
   });
-  if (error) return { ok: false, error: error.message.slice(0, 160) };
-  return { ok: true, message: `Recorded: ${decision.state} (${decision.reason}).` };
+  if (error) adminBack(known, "error", error.message.slice(0, 160));
+  adminBack(known, "notice", `Recorded: ${decision.state} (${decision.reason}).`);
+}
+
+/** Administrator: copy a strong, policy-eligible result into the checklist. Approval is a separate step. */
+export async function applyProviderResult(formData: FormData): Promise<void> {
+  const { user } = await requireAdmin();
+  const requestId = str(formData, "requestId");
+  if (!uuid.safeParse(requestId).success) adminBack(null, "error", "Unknown request.");
+  const limited = await checkRateLimit("api", user.id);
+  if (!limited.ok) adminBack(requestId, "error", limited.message);
+  const { error } = await (await db()).rpc("apply_provider_result_to_review", { p_request: requestId });
+  if (error) adminBack(requestId, "error", error.message.slice(0, 160));
+  adminBack(requestId, "notice", "Provider result copied into the checklist. Review it, then approve.");
 }

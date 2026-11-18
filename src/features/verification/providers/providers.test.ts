@@ -31,9 +31,9 @@ describe("policy engine", () => {
   it("refuses a config for another environment", () => {
     expect(decide(strong(), config({ environment: "staging" })).reason).toBe("wrong_environment");
   });
-  it("a negative result rejects and an unclear one goes to review", () => {
+  it("a negative result rejects and an unfinished one stays pending", () => {
     expect(decide(strong({ outcome: "negative" })).state).toBe("rejected");
-    expect(decide(strong({ outcome: "indeterminate" })).state).toBe("requires_review");
+    expect(decide(strong({ outcome: "indeterminate" })).state).toBe("provider_pending");
   });
   it("general student status never proves a program", () => {
     const c = config({ claims: ["CURRENT_STUDENT", "CURRENT_PROGRAM_STUDENT"] });

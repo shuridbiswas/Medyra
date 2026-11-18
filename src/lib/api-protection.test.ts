@@ -21,6 +21,10 @@ const ROUTES: Record<string, { protection: string; mustContain: string[] }> = {
     protection: "public by design (email links); validates the code and only redirects to safe paths",
     mustContain: ["safeNextPath"],
   },
+  "api/verification/providers/sheerid/webhook/route.ts": {
+    protection: "public by design (SheerID calls it); authorised only by an HMAC signature over the raw body, checked in processSheerIdWebhook",
+    mustContain: ["processSheerIdWebhook", "x-sheerid-signature", "no-store"],
+  },
   "settings/privacy/export/route.ts": {
     protection: "signed-in member only, recent sign-in, POST only, rate limited, never cached",
     mustContain: ["requireMember", "isRecentAuth", "checkRateLimit", "no-store", "405"],

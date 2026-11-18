@@ -15,23 +15,26 @@ Research basis: `Medyra_Existing_Student_Verification_Providers_Integration.md` 
 
 ## What was built
 
-- Migration `20261107000001_provider_verification.sql`: `verification_provider_configs` (all real providers off, cannot be enabled without a `sandbox`/`live` state, simulator development-only), `verification_attempts`, `verification_provider_events`, and three functions.
-- `src/features/verification/providers/`: provider-neutral types, `policy.ts` (fails closed), `sheerid.ts`, `simulated.ts`.
-- `src/features/verification/actions.ts`: `beginProviderAttempt` (member) and `confirmProviderAttempt` (administrator).
+- Migration `20261107000001`: provider configs (all off), attempts, events, member/admin functions. Migration `20261108000001`: attempts belong to a request of the same member (composite FK, history kept), `PROVIDER_VERIFICATION` method (general claim only), trusted writer (`verification_writer_keys`, `ingest_provider_result`, `provider_attempt_context`), forward-only result ranking, `provider_result` evidence rows, `apply_provider_result_to_review`, and a trigger that keeps attempt state in step with the request.
+- `src/features/verification/`: policy engine, SheerID adapter, simulator, trusted writer, webhook processor, queries, server actions, member and admin panels; route `/api/verification/providers/sheerid/webhook`.
 
-## Design decisions (and why they differ from the spec)
+## Design decisions
 
-1. **No service key, so no trusted webhook writer.** Medyra's rule is that the app only ever acts as the signed-in member. A member can call any function the app can, so a function that records "the provider said yes" would be forgeable. Therefore a provider result is recorded only by `record_provider_result`, which requires an administrator, after that administrator's action re-fetched the result from the provider. A SheerID webhook route was **not** added: it could not write anything safely and would be an extra unauthenticated endpoint. `verifySheerIdSignature` is ready if a trusted writer is added later.
-2. **Never issues a credential.** The result states are `proof_received`, `requires_review`, `rejected`, `provider_error`. Issuing the badge stays with the existing `approve_verification` reviewer flow. This also fits the spec's own rule that a general student result without a strong account link must not silently grant a high-assurance badge: SheerID results are always `partial` linkage.
-3. **Subject hash in the attempts row** (unique per provider, only for live states) replaces a separate bindings table. It is not readable by members.
-4. The existing request/credential/badge tables are reused; no parallel credential table was created.
+1. **Trusted writer without a service key.** The app keeps its rule of never holding a service_role key. The webhook uses the anonymous connection plus a separate writer key whose SHA-256 sits in `verification_writer_keys`; the two database functions it can call can only record a result on an existing attempt. They cannot approve anything.
+2. **A provider result never issues a credential.** It becomes a pending evidence row. A reviewer may copy a strong result (strong link, validated issuer, subject hash, not expired, not a test result in production) into the checklist and then approves with the unchanged `approve_verification`. SheerID gives partial linkage only, so it always needs manual review.
+3. Results only move an attempt forward (pending < review < success/rejected); duplicates are no-ops.
 
-## Not built (honest list)
+## Remaining gaps
 
-- No UI: nothing calls the two actions yet, and the admin page has no "check provider result" button.
-- No InAcademia/CAF/ID.me/MyCreds adapters, no provider router, no `/api/verification/*` routes, no scheduled re-verification, no circuit breaker.
-- Linking an attempt to a `student_verification_requests` row, so an approval cites the provider result, is not done.
-- Privacy impact assessment and counsel review are still required before real students.
+- Controls were built but not clicked in a browser.
+- No InAcademia, MyCreds, CAF or ID.me adapters; no provider router; no scheduled re-verification.
+- SheerID details-response fields beyond `currentStep` are unconfirmed.
+- Migrations are **not applied** to the development Supabase project (see the report); the webhook route was never called over HTTP.
+- Anonymous writer functions have no lockout against key guessing (key is 32+ random characters).
+
+## Next.js advisory
+
+`next` 16.4.3 was affected by GHSA-mfr8-8qww-v76h and GHSA-vc7v-qv4w-wrv8 (moderate, `use cache` leaks, versions 16.2.0 to 16.4.4) and the production build stopped on it. Upgraded to 16.4.6 (exact pin, with `eslint-config-next`). Build, lint, typecheck and tests pass. `npm audit --omit=dev` still lists 11 other findings in other packages (not addressed).
 
 ## Gates before any provider is switched on
 
@@ -44,4 +47,4 @@ Research basis: `Medyra_Existing_Student_Verification_Providers_Integration.md` 
 
 - `supabase/tests/provider-verification.test.ts` (16): configs, member write denial, forged state jumps, other members, private columns, admin-only recording, idempotency, duplicate identity, expiry, no credential created.
 - `src/features/verification/providers/providers.test.ts` (16): policy fail-closed cases (production vs simulated/sandbox, program claims, weak link, stale proof) and SheerID request shape, HMAC, normalizer.
-- Full suite: 1061 passing; lint and typecheck clean.
+- Provider journey/writer tests (22), webhook tests (10), earlier provider tests (32 combined with the above updates). Full suite: 1094 passing.

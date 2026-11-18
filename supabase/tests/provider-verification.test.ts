@@ -18,7 +18,7 @@ beforeEach(async () => {
   await h.asOwner();
   await h.db.exec(`
     delete from public.verification_attempts;
-    update public.verification_provider_configs set enabled = false, contract_state = case provider when 'simulated' then 'sandbox' else 'none' end;
+    update public.verification_provider_configs set claims = '{CURRENT_STUDENT}', enabled = false, contract_state = case provider when 'simulated' then 'sandbox' else 'none' end;
   `);
 });
 
@@ -27,10 +27,15 @@ async function enable(provider = "simulated") {
   await h.asOwner();
   await h.db.query("update public.verification_provider_configs set contract_state = 'sandbox', enabled = true where provider = $1", [provider]);
 }
-async function start(user: string, provider = "simulated", claim = "CURRENT_STUDENT", pid: string | null = null) {
+async function req(user: string) {
   const i = await inst();
   await h.asUser(user);
-  return (await h.rows<{ id: string }>("select public.start_provider_attempt($1,$2,$3,$4) as id", [i, provider, claim, pid]))[0].id;
+  return (await h.rows<{ id: string }>("select public.start_provider_request($1) as id", [i]))[0].id;
+}
+async function start(user: string, provider = "simulated", pid: string | null = null) {
+  const r = await req(user);
+  await h.asUser(user);
+  return (await h.rows<{ id: string }>("select public.start_provider_attempt($1,$2,$3) as id", [r, provider, pid]))[0].id;
 }
 const state = async (id: string) => {
   await h.asOwner();
@@ -68,20 +73,24 @@ describe("provider configuration", () => {
 describe("starting and moving an attempt", () => {
   it("a disabled or unapproved provider cannot start an attempt", async () => {
     await h.asUser(alice);
-    expect(await h.failure("select public.start_provider_attempt($1,'sheerid','CURRENT_STUDENT',null)", [await inst()])).toMatch(/not available/);
-    expect(await h.failure("select public.start_provider_attempt($1,'simulated','CURRENT_STUDENT',null)", [await inst()])).toMatch(/not available/);
+    const r = await req(alice);
+    expect(await h.failure("select public.start_provider_attempt($1,'sheerid',null)", [r])).toMatch(/not available/);
+    expect(await h.failure("select public.start_provider_attempt($1,'simulated',null)", [r])).toMatch(/not available/);
   });
-  it("a claim the provider is not approved for is refused", async () => {
+  it("a provider not approved for the requested claim is refused", async () => {
     await enable();
-    await h.asUser(alice);
-    expect(await h.failure("select public.start_provider_attempt($1,'simulated','CURRENT_PROGRAM_STUDENT',null)", [await inst()])).toMatch(/not available/);
+    await h.asOwner();
+    await h.db.query("update public.verification_provider_configs set claims = '{}' where provider = 'simulated'");
+    const r = await req(alice);
+    expect(await h.failure("select public.start_provider_attempt($1,'simulated',null)", [r])).toMatch(/not available/);
   });
   it("a member starts one, and only one open attempt per provider and claim", async () => {
     await enable();
     const id = await start(alice);
     expect(await state(id)).toBe("created");
     await h.asUser(alice);
-    expect(await h.failure("select public.start_provider_attempt($1,'simulated','CURRENT_STUDENT',null)", [await inst()])).toMatch(/open attempt/);
+    const request = (await h.rows<{ request_id: string }>("select request_id from public.verification_attempts"))[0].request_id;
+    expect(await h.failure("select public.start_provider_attempt($1,'simulated',null)", [request])).toMatch(/open attempt/);
   });
   it("members have no write path to attempts", async () => {
     await enable();
@@ -121,7 +130,7 @@ describe("starting and moving an attempt", () => {
 describe("recording a provider result", () => {
   async function pending(user: string = alice, provider = "simulated", pid: string | null = null) {
     await enable(provider);
-    const id = await start(user, provider, "CURRENT_STUDENT", pid);
+    const id = await start(user, provider, pid);
     await h.asUser(user);
     await h.db.query("select public.set_attempt_progress($1,'redirected')", [id]);
     return id;

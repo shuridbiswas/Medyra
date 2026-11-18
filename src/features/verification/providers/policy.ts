@@ -1,7 +1,7 @@
 import type { AttemptState, ClaimType, NormalizedProof, ProviderConfig, VerificationEnv } from "./types";
 
 export type PolicyDecision = {
-  state: Extract<AttemptState, "proof_received" | "requires_review" | "rejected" | "provider_error">;
+  state: Extract<AttemptState, "provider_pending" | "proof_received" | "requires_review" | "rejected" | "provider_error">;
   reason: string;
 };
 
@@ -27,7 +27,8 @@ export function decideProof(
   if (ctx.env === "production" && (proof.simulated || proof.sandbox || config.contractState !== "live"))
     return { state: "provider_error", reason: "test_proof_in_production" };
   if (proof.outcome === "negative") return { state: "rejected", reason: "provider_negative" };
-  if (proof.outcome === "indeterminate") return { state: "requires_review", reason: "provider_indeterminate" };
+  // Still in progress (or an unrecognised step): nothing for a reviewer yet, and it must not look final.
+  if (proof.outcome === "indeterminate") return { state: "provider_pending", reason: "provider_indeterminate" };
   if (proof.claimType !== ctx.requested) return { state: "requires_review", reason: "claim_mismatch" };
   // General student status never proves a program.
   if (ctx.requested === "CURRENT_PROGRAM_STUDENT" && !proof.programStated)

@@ -7,6 +7,8 @@ import { requireMember } from "@/lib/auth/session";
 import { parseLang, t, text } from "@/features/student-verification/content";
 import { getInstitution, getPolicy, getRequestDetail, listInstitutions } from "@/features/student-verification/queries";
 import { Banner, RequestPanel, StartPanel } from "@/features/student-verification/components/wizard";
+import { MemberProviderPanel } from "@/features/verification/components/provider-panels";
+import { listAvailableProviders, listProviderAttempts } from "@/features/verification/queries";
 
 export const metadata: Metadata = { title: "Student verification", robots: { index: false, follow: false } };
 
@@ -31,12 +33,21 @@ async function Content({ searchParams }: Props) {
   const suffix = lang === "fr" ? "?lang=fr" : "";
 
   let body: React.ReactNode;
+  let providerPanel: React.ReactNode = null;
   if (requestId && UUID.test(requestId)) {
     const detail = await getRequestDetail(requestId);
     // Row level security returns nothing for someone else's request.
     if (!detail || detail.request.user_id !== user.id) notFound();
     const [found, policy] = await Promise.all([getInstitution(detail.request.institution_id), getPolicy()]);
     if (!found) notFound();
+    providerPanel = (
+      <MemberProviderPanel
+        providers={detail.request.method === "PROVIDER_VERIFICATION" ? await listAvailableProviders() : []}
+        attempts={await listProviderAttempts(detail.request.id)}
+        institutionId={detail.request.institution_id}
+        requestId={detail.request.id}
+      />
+    );
     body = (
       <RequestPanel
         request={detail.request}
@@ -53,6 +64,9 @@ async function Content({ searchParams }: Props) {
       institutionId && UUID.test(institutionId) ? getInstitution(institutionId) : Promise.resolve(null),
     ]);
     body = <StartPanel institutions={institutions} selected={selected} lang={lang} />;
+    providerPanel = (
+      <MemberProviderPanel providers={await listAvailableProviders()} attempts={[]} institutionId={selected ? institutionId ?? null : null} requestId={null} />
+    );
   }
 
   return (
@@ -74,6 +88,7 @@ async function Content({ searchParams }: Props) {
         </nav>
         <Banner notice={first(params.notice)} error={first(params.error)} />
         {body}
+        {providerPanel}
       </main>
     </>
   );

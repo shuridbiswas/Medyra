@@ -174,3 +174,7 @@ Automatically, by `npm test` (348 tests), `npm run lint`, `npm run typecheck` an
 ## Deploying
 
 Deploy to Netlify by following [DEPLOYMENT.md](DEPLOYMENT.md). Do not attach a production domain until a preview deployment passes its checklist.
+
+## Student verification through external providers
+
+Off by default and never issues a credential on its own. See `docs/verification/SHEERID_CONNECTION_SETUP.md` for setup and `docs/verification/PROVIDER_INTEGRATION_TESTING.md` for what is tested, mocked and still needs credentials, vendor approval and security review. Migrations `20261107000001` and `20261108000001` must be applied to the development project first (`npm run db:migrate`).
