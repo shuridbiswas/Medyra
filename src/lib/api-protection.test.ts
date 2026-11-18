@@ -25,6 +25,10 @@ const ROUTES: Record<string, { protection: string; mustContain: string[] }> = {
     protection: "public by design (SheerID calls it); authorised only by an HMAC signature over the raw body, checked in processSheerIdWebhook",
     mustContain: ["processSheerIdWebhook", "x-sheerid-signature", "no-store"],
   },
+  "api/verification/student/return/route.ts": {
+    protection: "signed-in member only; the state must match an attempt that member started; the ID token is fully validated in processSsoCallback",
+    mustContain: ["requireMember", "processSsoCallback", "no-store"],
+  },
   "settings/privacy/export/route.ts": {
     protection: "signed-in member only, recent sign-in, POST only, rate limited, never cached",
     mustContain: ["requireMember", "isRecentAuth", "checkRateLimit", "no-store", "405"],
