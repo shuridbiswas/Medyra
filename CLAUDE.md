@@ -178,6 +178,8 @@ Student verification (Quebec students; migration `20261105000001_student_verific
 - Dev fixtures: `npm run seed:verification` (labelled `[DEV TEST DATA]`, dev project only).
 - Tests: `supabase/tests/student-verification.test.ts`, `src/features/student-verification/*.test.*`. `h.reset()` lists the new tables.
 
+- **External providers** (migration `20261107000001`, `src/features/verification/`, docs `docs/verification/EXTERNAL_PROVIDER_AUDIT.md`): all off by default and fail closed. Provider results are recorded only by an administrator session (`record_provider_result`, after re-fetching from the provider); never add a function a member can call to record one. They never issue a credential: approval stays with `approve_verification`. The simulator is development-only. No vendor has been contacted.
+
 Out of scope until later phases: employer and job features, jobs, automated or AI moderation, post media, AI features, per-field privacy settings, username changes, organization profiles (follows are member-only), mentions.
 
 ## Infrastructure (Netlify, Sentry, Upstash, Resend, ProductBridge, Pinecone)

@@ -151,6 +151,7 @@ export async function createHarness() {
       alter table public.verification_review_events disable trigger verification_events_append_only;
       alter table public.verification_audit_log disable trigger verification_audit_append_only;
       delete from public.student_verified_credentials;
+      delete from public.verification_attempts;
       delete from public.student_verification_requests;
       delete from public.verification_audit_log;
       delete from public.academic_programs;

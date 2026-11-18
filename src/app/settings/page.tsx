@@ -12,6 +12,8 @@ import { AppHeader } from "@/components/layout/app-header";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { requireMember } from "@/lib/auth/session";
+import { VerificationChip } from "@/components/verification-chip";
+import { getBadges } from "@/features/student-verification/queries";
 import { signOut } from "@/features/auth/actions";
 import { ResetPasswordForm } from "@/features/auth/components/reset-password-form";
 
@@ -63,6 +65,8 @@ async function SettingsContent() {
     .select("notify_activity, inapp_connections, inapp_comments")
     .eq("user_id", user.id)
     .maybeSingle();
+
+  const badge = (await getBadges([user.id])).get(user.id) ?? null;
 
   return (
     <>
@@ -143,6 +147,37 @@ async function SettingsContent() {
                 Privacy and your data
               </Link>
               <span className="text-muted-foreground"> — profile visibility, download your data, delete your account</span>
+            </li>
+          </ul>
+        </section>
+
+        <section
+          aria-labelledby="student-verification"
+          className="rounded-2xl border border-border bg-surface p-5 sm:p-7"
+        >
+          <h2 id="student-verification" className="text-xl font-bold text-maroon-900">
+            Student verification
+          </h2>
+          <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            Your status: <VerificationChip badge={badge} />
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Optional. Verify that you are a current student at a Quebec university or CEGEP. It proves student status only, not a right to practise.
+          </p>
+          <ul className="mt-3 space-y-2 text-sm">
+            <li>
+              <Link href="/verification/student" className="font-medium text-maroon-700 underline underline-offset-2">
+                {badge ? "Add or renew a credential" : "Start verification"}
+              </Link>
+            </li>
+            <li>
+              <Link href="/verification/student/status" className="font-medium text-maroon-700 underline underline-offset-2">
+                Check my status
+              </Link>
+              <span className="text-muted-foreground"> · </span>
+              <Link href="/verification/student/history" className="font-medium text-maroon-700 underline underline-offset-2">
+                History
+              </Link>
             </li>
           </ul>
         </section>
