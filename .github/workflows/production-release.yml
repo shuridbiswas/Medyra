@@ -1,0 +1,43 @@
+# Production release gate. DISABLED: Medyra has no production database or production-ready
+# environment yet (docs/engineering/RELEASE_POLICY.md). This workflow only checks prerequisites and
+# refuses. It is never triggered by agents or by agent-created PRs.
+name: production-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit to release"
+        required: true
+      confirm:
+        description: 'Type "release-to-production"'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: medyra-production-release
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - name: Prerequisites
+        env:
+          ENABLED: ${{ vars.MEDYRA_PRODUCTION_RELEASE_ENABLED }}
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          [ "$CONFIRM" = "release-to-production" ] || { echo "confirmation text does not match"; exit 1; }
+          [ "$ENABLED" = "true" ] || {
+            echo "Production releases are disabled. Missing prerequisites (RELEASE_POLICY.md):"
+            echo "- separate production Supabase project, auth and email configured, backups verified"
+            echo "- migration parity for this commit, monitoring, moderation operations, legal and privacy decisions"
+            echo "- Netlify production branch and environment confirmed by the owner"
+            exit 1
+          }
+          echo "Prerequisites flag is set, but the release steps have not been implemented. Follow RELEASE_POLICY.md manually."
+          exit 1

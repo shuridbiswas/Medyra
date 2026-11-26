@@ -1,0 +1,56 @@
+# Validates one Netlify deploy for one reviewed commit: health, environment label, redirects,
+# security headers. Read-only GET requests; publishes nothing.
+name: preview-validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Deploy URL (https://<name>.netlify.app or a host listed in MEDYRA_PREVIEW_HOSTS)"
+        required: true
+      expect_env:
+        description: "Environment the deploy must report"
+        type: choice
+        options: [preview, production]
+        default: preview
+      sha:
+        description: "Commit SHA the deploy is expected to serve (recorded with the evidence)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check the target host is allowed
+        env:
+          URL: ${{ inputs.url }}
+          EXTRA: ${{ vars.MEDYRA_PREVIEW_HOSTS }}
+        run: |
+          host=$(printf '%s' "$URL" | sed -E 's#^https://([^/]+)/?.*$#\1#')
+          case "$URL" in https://*) ;; *) echo "https only"; exit 1;; esac
+          if printf '%s' "$host" | grep -Eq '^[a-z0-9-]+(--[a-z0-9-]+)?\.netlify\.app$'; then exit 0; fi
+          for h in $EXTRA; do [ "$h" = "$host" ] && exit 0; done
+          echo "host $host is not an allowed preview host"; exit 1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - name: Smoke test
+        env:
+          URL: ${{ inputs.url }}
+          EXPECT: ${{ inputs.expect_env }}
+        run: |
+          set -o pipefail
+          node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/engineering/smoke.ts "$URL" --expect-env "$EXPECT" --json | tee smoke.json
+      - name: Evidence
+        if: always()
+        run: |
+          echo "## Preview smoke for ${{ inputs.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"; cat smoke.json >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "no output" >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"

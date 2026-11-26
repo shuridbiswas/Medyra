@@ -20,7 +20,11 @@
     "db:reset:dev": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/seed/wipe.ts",
     "db:reset:dry-run": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/seed/reset.ts",
     "seed:verification": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/seed/verification.ts",
-    "seed:login": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/seed/login.ts"
+    "seed:login": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/seed/login.ts",
+    "eng": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/engineering/orchestrator.ts",
+    "eng:secrets": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/engineering/secret-scan.ts",
+    "eng:migrations": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/engineering/migrations-check.ts",
+    "eng:smoke": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/engineering/smoke.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

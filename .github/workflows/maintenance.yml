@@ -1,0 +1,53 @@
+# Bounded, read-only maintenance report: advisories, backlog health, stale claims, next work.
+# Creates no branches and calls no AI. Repairs are proposed as backlog tasks by a human or the
+# product steward. Schedule stays off until activation (task ENG-006).
+name: maintenance
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: "40 9 * * *"   # daily, after activation
+
+permissions:
+  contents: read
+
+concurrency:
+  group: medyra-maintenance
+  cancel-in-progress: false
+
+jobs:
+  report:
+    if: vars.MEDYRA_AUTONOMY_PAUSED != 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Load durable state if present
+        run: |
+          if git ls-remote --exit-code https://github.com/${{ github.repository }} engineering-state >/dev/null 2>&1; then
+            git fetch --depth 1 https://github.com/${{ github.repository }} engineering-state
+            git checkout FETCH_HEAD -- engineering/
+          fi
+      - name: Engineering report
+        run: |
+          npm run -s eng -- validate
+          npm run -s eng -- report >> "$GITHUB_STEP_SUMMARY"
+          echo '## Claims and budget' >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"; npm run -s eng -- status >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: Dependency advisories (report only)
+        run: |
+          echo '## npm audit (production dependencies)' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          npm audit --omit=dev >> "$GITHUB_STEP_SUMMARY" 2>&1 || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: Policy gates on the current tree
+        run: |
+          npm run -s eng:secrets
+          npm run -s eng:migrations
