@@ -32,6 +32,7 @@ import {
   budgetStatus,
   claim,
   eligibility,
+  isSecuritySensitive,
   newRunId,
   pauseReason,
   preflight,
@@ -44,6 +45,8 @@ import {
 } from "./lib/engine.ts";
 import { GATES, HandoffSchema, RESULT, ROLES, RunSchema, STATES, type Run, type State } from "./lib/model.ts";
 import { engineeringPaths, loadRun, loadState, readJson, StoreError, withMutex, writeJsonAtomic } from "./lib/store.ts";
+import { admit, expireSlices, settleSlices } from "./lib/governor.ts";
+import { loadConfig, loadLedger, loadSnapshot, reportLines } from "./usage/state.ts";
 
 const root = process.env.MEDYRA_ENGINEERING_ROOT ?? process.cwd();
 const paths = engineeringPaths(root);
@@ -105,6 +108,21 @@ function brief(taskId: string, run: Run): string {
   ].join("\n");
 }
 
+/** Usage governor section for the report; never fails the report itself. */
+function usageSection(s: ReturnType<typeof loadState>): string[] {
+  // Workflow logs and step summaries may be public: never print the founder's usage figures there.
+  if (process.env.GITHUB_ACTIONS === "true") return ["## Usage (subscription, estimated)", "- figures are shown only on the owner's machine (`npm run usage:report`)"];
+  try {
+    const config = loadConfig(root);
+    const snap = loadSnapshot(root).snapshot;
+    const ledger = settleSlices(config.usageGovernor, expireSlices(loadLedger(root), now()), snap, now());
+    const d = admit({ config, ledger, snapshot: snap, control: s.control, env: process.env, now: now(), request: { kind: "continue", taskId: null, taskApproved: true, model: "sonnet", securitySensitive: false } });
+    return reportLines(config, ledger, d, new Date(now().getTime() - 7 * 86_400_000));
+  } catch (e) {
+    return ["## Usage (subscription, estimated)", `- unavailable: ${(e as Error).message}`];
+  }
+}
+
 async function main() {
   const { command, flags } = args(process.argv.slice(2));
   switch (command) {
@@ -161,6 +179,21 @@ async function main() {
         }
         if (mode === "dry-run") {
           console.log(JSON.stringify({ dryRun: true, wouldClaim: task.id, recovered: rec.recovered, ineligible }, null, 2));
+          return;
+        }
+        // Every real run starts AI work, so it must pass the usage governor's admission controller.
+        const gov = admit({
+          config: loadConfig(root),
+          ledger: loadLedger(root),
+          snapshot: loadSnapshot(root).snapshot,
+          control: s.control,
+          env: process.env,
+          now: now(),
+          request: { kind: "new-task", taskId: task.id, taskApproved: true, model: (s.control.models["medyra-orchestrator"] ?? "sonnet") as "sonnet", securitySensitive: isSecuritySensitive(task, s.policy) },
+        });
+        if (!gov.admitted) {
+          console.log(JSON.stringify({ stopped: true, reasons: gov.failures.map((f) => `usage governor ${f.code}: ${f.detail}`), nextEligibleAt: gov.nextEligibleAt }, null, 2));
+          process.exitCode = 3;
           return;
         }
         const runId = newRunId(now());
@@ -372,6 +405,8 @@ async function main() {
           `## Proposed (not approved)\n${list(by("PROPOSED"))}`,
           `## Founder decisions needed\n${list(decisions)}`,
           `## Next eligible work\n${eligible.length ? eligible.slice(0, 5).map((t) => `- ${t.id} ${t.title}`).join("\n") : `- none (${ineligible.length} READY tasks are not eligible; run \`next\` for reasons)`}`,
+          "",
+          ...usageSection(s),
           "",
           "CI, browser tests, security findings and deployments: see the GitHub Actions summary for the same commit. This report does not infer them.",
         ].join("\n"),

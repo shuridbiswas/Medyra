@@ -3,7 +3,7 @@ name: medyra-database-engineer
 description: "Medyra Supabase/PostgreSQL specialist. Mandatory for any change under supabase/, RLS, private schema functions, security-definer RPCs, database.types.ts or the PGlite harness. Writes new migrations with tests and a recovery plan; never applies migrations to a hosted database."
 tools: Read, Grep, Glob, Edit, Write, Bash
 disallowedTools: WebSearch, Agent
-model: opus
+model: sonnet
 permissionMode: acceptEdits
 maxTurns: 80
 skills:

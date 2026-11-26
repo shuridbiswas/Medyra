@@ -5,7 +5,11 @@
 # Requires, set by the owner:
 #   repository variables  MEDYRA_AUTONOMY_ENABLED=true, MEDYRA_AUTONOMY_PAUSED=false (kill switch)
 #   environment           "autonomy" with a required reviewer (approves each execute run)
-#   environment secret    ANTHROPIC_API_KEY (or CLAUDE_CODE_OAUTH_TOKEN)
+#   environment secret    CLAUDE_CODE_OAUTH_TOKEN (subscription). API keys are prohibited by the usage governor.
+#
+# The usage governor (docs/engineering/USAGE_GOVERNOR.md) must admit every run. Its telemetry comes from
+# Claude Code's status line on the founder's machine, which a GitHub runner does not have, so this job
+# is refused (TELEMETRY) until a CI telemetry source is documented and approved. That is intended.
 #   engineering/control.json  autonomy.executionEnabled=true (owner-only file)
 name: autonomous-development
 
@@ -86,6 +90,8 @@ jobs:
             git fetch origin engineering-state
             git checkout origin/engineering-state -- engineering/
           fi
+      - name: Usage governor admission (fails closed; prints codes only, never usage figures)
+        run: npm run -s usage:admit
       - name: Preflight and claim (deterministic)
         id: claim
         run: |
@@ -99,7 +105,6 @@ jobs:
         if: steps.claim.outputs.run_id != ''
         uses: anthropics/claude-code-action@4411a9e9b0283becf4b924f7bce360fd7756c78c # v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_args: --max-turns 60 --max-budget-usd ${{ env.RUN_BUDGET_USD }}

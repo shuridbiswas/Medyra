@@ -1,5 +1,7 @@
 # Cost policy
 
+> **Superseded for autonomous execution (2026-11-26):** the subscription usage governor (`USAGE_GOVERNOR.md`) is now the authority: 25 % of the weekly allowance (paced), 10 % of each five-hour allowance, subscription only, no API billing and no extra usage. The USD limits below remain in `control.json` as an inert secondary check; API keys are refused, so no USD spend should occur.
+
 Recurring execution is **disabled**. The numbers below are proposed safety limits from the founder's instruction, recorded in `engineering/control.json`; they are not authorization to spend money.
 
 | Limit | Proposed |

@@ -192,6 +192,19 @@ export function recoverStale(backlog: Backlog, control: Control, now: Date): { b
   return { backlog: { ...backlog, tasks }, recovered };
 }
 
+/**
+ * A usage-governor pause is not a failure: the run keeps its claim until it may resume, so waiting
+ * for an allowance reset never spends a retry. Only the run that holds the claim may extend it.
+ */
+export function holdClaimForPause(backlog: Backlog, ctx: { taskId: string; runId: string; until: Date; control: Control; now: Date }): Backlog {
+  const task = backlog.tasks.find((t) => t.id === ctx.taskId);
+  if (!task?.claim || task.claim.runId !== ctx.runId || !ACTIVE_STATES.includes(task.state)) {
+    throw new RuleError("NOT_CLAIM_OWNER", `${ctx.taskId} is not held by ${ctx.runId}`);
+  }
+  const expiresAt = new Date(Math.max(ctx.until.getTime(), ctx.now.getTime()) + ctx.control.limits.claimTtlMinutes * 60_000).toISOString();
+  return update(backlog, ctx.taskId, (t) => ({ ...t, claim: { ...t.claim!, expiresAt } }));
+}
+
 // ---------------------------------------------------------------------------
 // Evidence
 // ---------------------------------------------------------------------------

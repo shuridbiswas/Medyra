@@ -2,6 +2,7 @@
 
 ## Pause everything (fastest first)
 
+0. **Local agents (usage governor):** `npm run usage:pause -- --reason "…"` stops new slices at once; disable the "Medyra usage tick" task in Windows Task Scheduler to stop ticks. A running slice ends within its 30-minute limit with a checkpoint. `npm run usage:resume` clears only this pause.
 1. **Repository variable:** GitHub → Settings → Secrets and variables → Actions → Variables → `MEDYRA_AUTONOMY_PAUSED` = `true`. Every autonomous, maintenance and dev-migration job checks it at start-up; the engine also checks it (`MEDYRA_AUTONOMY_PAUSED` env) before claims and transitions.
 2. **Cancel running workflows:** Actions tab → running `autonomous-development` → Cancel. Cancelling stops further steps; it does **not** undo a push, PR or migration that already happened.
 3. **Disable workflows:** Actions → workflow → "…" → Disable workflow.

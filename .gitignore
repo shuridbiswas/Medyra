@@ -54,6 +54,8 @@ next-env.d.ts
 
 # Autonomous engineering: runtime lock and temp files (state files are versioned)
 engineering/.mutex
+# Usage governor ledger and runtime files: personal subscription figures, never committed
+engineering/.local/
 engineering/*.tmp
 engineering/runs/*.tmp
 *.tsbuildinfo

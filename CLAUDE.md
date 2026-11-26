@@ -205,4 +205,6 @@ The roadmap now uses stable epic ids in `docs/engineering/ROADMAP.md`; task stat
 
 Ten `medyra-*` agents (`.claude/agents/`) and seventeen `medyra-*` skills (`.claude/skills/`) run approved backlog work through the deterministic orchestrator (`npm run eng -- status|report|next|cycle`). Start with `docs/engineering/AUTONOMOUS_ENGINEERING.md`; resume work with `docs/engineering/SESSION_RECOVERY.md`. Owner-only files: `engineering/{control,approvals,policy}.json`, `.claude/settings.json`, `.claude/hooks/`. The guard hook blocks secrets and destructive commands for every session; it is not to be bypassed. Unattended execution is off until the activation checklist is complete.
 
+Usage governor (`docs/engineering/USAGE_GOVERNOR.md`): every AI run must be admitted by `scripts/engineering/lib/governor.ts` (25 % of the weekly subscription allowance paced by day, 10 % of each five-hour allowance, subscription only, fail closed without fresh status line telemetry). `npm run usage:status` shows the state without using Claude. Never bypass it, launch `claude -p` from an agent, set `ANTHROPIC_API_KEY`, or commit `engineering/.local/` (personal usage figures).
+
 Open product questions: professional verification method, anonymity vs. safety design, launch regions (privacy law and crisis resources), handling of minors, MVP cut line.

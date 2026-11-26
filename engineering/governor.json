@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "usageGovernor": {
+    "enabled": true,
+    "primaryBudget": "weekly",
+    "accountingMode": "strict-account-protection",
+    "estimatedAttributionAuthorizedByOwner": false,
+    "weekly": {
+      "allocationPercent": 25,
+      "pacingEnabled": true,
+      "carryForwardWithinCycle": true,
+      "carryForwardAcrossCycles": false
+    },
+    "fiveHour": {
+      "allocationPercent": 10,
+      "warningPercent": 7,
+      "checkpointPercent": 8,
+      "stopNewRequestsPercent": 9
+    },
+    "sharedAccount": {
+      "weeklyStopPercent": 75,
+      "fiveHourStopPercent": 60
+    },
+    "execution": {
+      "maxConcurrentAIRequests": 1,
+      "maxConcurrentImplementationTasks": 1,
+      "maxRemediationAttempts": 2,
+      "automaticPause": true,
+      "automaticResume": true,
+      "checkpointingEnabled": true,
+      "sliceMaxTurns": 30,
+      "sliceTimeoutMinutes": 30
+    },
+    "sliceEstimate": {
+      "fiveHourPercent": 2,
+      "weeklyPercent": 0.5,
+      "safetyMultiplier": 1.25
+    },
+    "telemetry": {
+      "maxAgeMinutes": 15,
+      "settleMinutes": 2,
+      "roundingMarginPercent": 0.5
+    },
+    "models": {
+      "allowed": ["haiku", "sonnet", "opus"],
+      "opusOnlyForSecuritySensitive": true
+    },
+    "scheduler": {
+      "eligibilityCheckMinutes": 15,
+      "preferResetBasedScheduling": true,
+      "allowQuotaConsumingPolling": false
+    },
+    "billing": {
+      "subscriptionOnly": true,
+      "allowAdditionalPaidUsage": false,
+      "allowApiBillingFallback": false,
+      "extraUsageDisabledConfirmedAt": null
+    },
+    "safety": {
+      "failClosedOnMissingTelemetry": true,
+      "requireFreshTelemetry": true,
+      "emergencyStopEnabled": true,
+      "preventAgentBudgetBypass": true
+    }
+  }
+}

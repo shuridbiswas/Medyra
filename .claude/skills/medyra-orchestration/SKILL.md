@@ -22,6 +22,11 @@ Run one bounded Medyra engineering cycle through the deterministic orchestrator:
 7. Run code review and QA (and security review when required) on the exact SHA; record with `review`.
 8. Stop after `maxTasksPerCycle` tasks, `maxCycleMinutes`, budget exhaustion, pause, or no eligible work.
 
+## Usage governor (subscription allowance)
+- Every real run is admitted by the usage governor (`npm run usage:dry-run` shows why not). You work inside one bounded slice: checkpoint and commit after each completed step so the slice can end at any turn without losing work.
+- Activate only the roles the task needs. Reuse recorded evidence: never re-run a review or gate that already holds for the unchanged commit. Prefer scripts (tests, lint, build, status) over model reasoning for anything deterministic.
+- Never launch another Claude session, `claude -p`, cloud task or external AI service, and never change governor or usage files (`engineering/governor.json`, `engineering/.local/`).
+
 ## Medyra invariants
 - Deterministic code decides eligibility, claims, transitions, budget and gates; models never override it.
 - The orchestrator never reviews or approves its own implementation.
