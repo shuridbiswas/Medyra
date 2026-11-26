@@ -1,0 +1,52 @@
+name: Engineering task
+description: A backlog task with a stable id (canonical once the backlog migrates to Issues; see docs/engineering/AUTONOMOUS_ENGINEERING.md)
+title: "[TASK-000] "
+labels: ["engineering", "proposed"]
+body:
+  - type: input
+    id: task_id
+    attributes:
+      label: Task id
+      description: ENG-, SEC-, DB-, QA-, OPS-, FEAT- or DOC- followed by three digits
+      placeholder: FEAT-017
+    validations:
+      required: true
+  - type: dropdown
+    id: approval
+    attributes:
+      label: Approval status
+      description: Only the owner moves a task to approved (engineering/approvals.json).
+      options:
+        - PROPOSED_BY_AGENT
+        - APPROVED_REQUIREMENT
+        - OWNER_DECISION_NEEDED
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options: [P0, P1, P2, P3]
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description and source requirement
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria (testable)
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Allowed file scope and dependencies
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk
+      options: [low, medium, high, critical]

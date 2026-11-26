@@ -1,0 +1,88 @@
+# Hosted DEV database migrations, separated from every other workflow. Uses a scoped token from
+# the protected "dev-database" environment (required reviewer = owner). Never resets, wipes or
+# seeds; never touches production. Mode "parity" is read-only.
+#
+# Owner setup: environment "dev-database" with a required reviewer, secrets DEV_SUPABASE_URL,
+# DEV_SUPABASE_PUBLISHABLE_KEY, DEV_SUPABASE_SCOPED_TOKEN (Management API token limited to the dev
+# project), variables DEV_PROJECT_REF and PROTECTED_PROJECT_REFS (production refs, comma-separated),
+# and repository variable MEDYRA_HOSTED_DEV_MIGRATIONS=true to allow mode "apply".
+name: dev-migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [parity, apply]
+        default: parity
+      confirm:
+        description: 'Type "apply-to-dev" to apply pending migrations'
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: medyra-dev-migration
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: local verification (PGlite, lock, ordering)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run eng:migrations
+      - run: npx vitest run supabase/tests
+
+  hosted:
+    name: dev parity / apply
+    needs: verify
+    if: vars.MEDYRA_AUTONOMY_PAUSED != 'true'
+    runs-on: ubuntu-24.04
+    environment: dev-database
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.DEV_SUPABASE_PUBLISHABLE_KEY }}
+      SEED_ALLOWED_PROJECT_REF: ${{ vars.DEV_PROJECT_REF }}
+      SEED_PROTECTED_PROJECT_REFS: ${{ vars.PROTECTED_PROJECT_REFS }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.DEV_SUPABASE_SCOPED_TOKEN }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Refuse anything but the configured dev project
+        run: |
+          test -n "$SEED_ALLOWED_PROJECT_REF" || { echo "DEV_PROJECT_REF not set"; exit 1; }
+          case ",$SEED_PROTECTED_PROJECT_REFS," in *",$SEED_ALLOWED_PROJECT_REF,"*) echo "dev ref is on the protected list"; exit 1;; esac
+      - name: Parity before
+        id: before
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/engineering/migration-parity.ts | tee parity-before.json || test $? -eq 5
+      - name: Apply pending migrations
+        if: inputs.mode == 'apply'
+        run: |
+          [ "${{ inputs.confirm }}" = "apply-to-dev" ] || { echo 'confirm must be "apply-to-dev"'; exit 1; }
+          [ "${{ vars.MEDYRA_HOSTED_DEV_MIGRATIONS }}" = "true" ] || { echo "MEDYRA_HOSTED_DEV_MIGRATIONS is not true"; exit 1; }
+          node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/seed/migrate.ts
+      - name: Parity after
+        if: inputs.mode == 'apply'
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/engineering/migration-parity.ts | tee parity-after.json
+      - name: Evidence
+        if: always()
+        run: |
+          echo "## Dev migration (${{ inputs.mode }}) at ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          for f in parity-before.json parity-after.json; do [ -f "$f" ] && { echo "### $f"; echo '```json'; cat "$f"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"; done

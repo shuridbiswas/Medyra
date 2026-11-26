@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "paused": false,
+  "autonomy": {
+    "executionEnabled": false,
+    "scheduleEnabled": false,
+    "autoIntegrateToDev": false,
+    "hostedDevMigrations": false
+  },
+  "limits": {
+    "maxConcurrentImplementations": 1,
+    "maxRemediationAttempts": 2,
+    "maxTasksPerCycle": 1,
+    "maxCycleMinutes": 45,
+    "claimTtlMinutes": 90,
+    "perRunUsd": 5,
+    "perDayUsd": 10,
+    "perMonthUsd": 100
+  },
+  "models": {
+    "medyra-orchestrator": "sonnet",
+    "medyra-product-steward": "sonnet",
+    "medyra-feature-engineer": "sonnet",
+    "medyra-database-engineer": "opus",
+    "medyra-qa-engineer": "sonnet",
+    "medyra-security-reviewer": "opus",
+    "medyra-code-reviewer": "sonnet",
+    "medyra-devops-engineer": "sonnet",
+    "medyra-documentation-steward": "haiku",
+    "medyra-maintenance-engineer": "sonnet"
+  }
+}

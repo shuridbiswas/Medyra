@@ -1,0 +1,1477 @@
+{
+  "version": 1,
+  "canonical": "local-bootstrap",
+  "tasks": [
+    {
+      "id": "ENG-001",
+      "title": "Version project agents, skills, settings and guard hook",
+      "description": "Create the ten medyra-* subagents, seventeen medyra-* skills, project settings with deny rules and the PreToolUse guard hook, and narrow .gitignore so they are versioned.",
+      "source": "Founder instruction 'Autonomous AI Engineering Department' §27",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P0",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Agents and skills parse with valid frontmatter",
+        "Guard hook blocks secret reads and forbidden commands (tested)",
+        ".claude/ ignore rules keep local files out of git"
+      ],
+      "risk": "low",
+      "securitySensitive": true,
+      "requiredAgents": [
+        "medyra-devops-engineer",
+        "medyra-security-reviewer"
+      ],
+      "fileScope": [
+        ".claude/**",
+        ".gitignore"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "DONE",
+      "blockers": [],
+      "completionEvidence": "Bootstrap: files created; hook unit-tested in scripts/engineering/engine.test.ts; see docs/engineering/AGENT_REGISTRY.md",
+      "history": [
+        {
+          "from": "READY",
+          "to": "DONE",
+          "at": "2026-11-25T00:00:00Z",
+          "by": "bootstrap",
+          "note": "implemented during system bootstrap; not processed through the engine"
+        }
+      ]
+    },
+    {
+      "id": "ENG-002",
+      "title": "Deterministic orchestration engine and persistent task store",
+      "description": "Task schema, state machine, claims with leases, stale recovery, budget, pause, review and gate evidence, handoff validation, reporting.",
+      "source": "Founder instruction 'Autonomous AI Engineering Department' §27",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P0",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "All rules enforced in TypeScript, not by models",
+        "Failure-injection tests pass",
+        "cycle defaults to dry-run"
+      ],
+      "risk": "low",
+      "securitySensitive": true,
+      "requiredAgents": [
+        "medyra-devops-engineer",
+        "medyra-code-reviewer"
+      ],
+      "fileScope": [
+        "scripts/engineering/**",
+        "engineering/**"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "DONE",
+      "blockers": [],
+      "completionEvidence": "Bootstrap: scripts/engineering/{orchestrator.ts,lib/*}; tests scripts/engineering/engine.test.ts",
+      "history": [
+        {
+          "from": "READY",
+          "to": "DONE",
+          "at": "2026-11-25T00:00:00Z",
+          "by": "bootstrap",
+          "note": "implemented during system bootstrap; not processed through the engine"
+        }
+      ]
+    },
+    {
+      "id": "ENG-003",
+      "title": "Activate deterministic CI on GitHub",
+      "description": "ci.yml is written (lint, typecheck, tests, build, secret scan, migration lock, engineering validation). It has never run on GitHub.",
+      "source": "Founder instruction 'Autonomous AI Engineering Department' §27",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P0",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "ci.yml runs green on a PR to dev",
+        "Required status checks configured"
+      ],
+      "risk": "low",
+      "securitySensitive": true,
+      "requiredAgents": [
+        "medyra-devops-engineer"
+      ],
+      "fileScope": [
+        ".github/workflows/**"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Owner must push the bootstrap branch and confirm GitHub Actions is enabled (OWNER_DECISIONS.md D-03)"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "SEC-001",
+      "title": "Rotate the Supabase personal access token; scope automation credentials",
+      "description": "A SUPABASE_ACCESS_TOKEN exists in .env.local (value never read). Revoke or rotate it, create a dev-only scoped token stored only as a GitHub environment secret for dev-migration.yml.",
+      "source": "docs/autonomous-engineering-audit (2026-11-25) G1 / PRODUCTION_READINESS blocker 1",
+      "approval": "OWNER_DECISION_NEEDED",
+      "priority": "P0",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Old token revoked",
+        "Scoped token exists only in the dev-database environment",
+        "Owner records completion in OWNER_DECISIONS.md"
+      ],
+      "risk": "critical",
+      "securitySensitive": true,
+      "requiredAgents": [
+        "medyra-security-reviewer"
+      ],
+      "fileScope": [
+        "docs/engineering/OWNER_DECISIONS.md"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Human-only credential action"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "SEC-002",
+      "title": "Secret scanning and applied-migration immutability gates",
+      "description": "Dependency-free secret scan of tracked files and a SHA-256 lock of migration files so applied migrations cannot be edited silently.",
+      "source": "Founder instruction 'Autonomous AI Engineering Department' §27",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P0",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "secret-scan passes on the current tree",
+        "migration check fails when an existing file changes"
+      ],
+      "risk": "low",
+      "securitySensitive": true,
+      "requiredAgents": [
+        "medyra-devops-engineer"
+      ],
+      "fileScope": [
+        "scripts/engineering/**",
+        "engineering/migrations.lock.json"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "DONE",
+      "blockers": [],
+      "completionEvidence": "Bootstrap: scripts/engineering/secret-scan.ts, scripts/engineering/migrations-check.ts, engineering/migrations.lock.json",
+      "history": [
+        {
+          "from": "READY",
+          "to": "DONE",
+          "at": "2026-11-25T00:00:00Z",
+          "by": "bootstrap",
+          "note": "implemented during system bootstrap; not processed through the engine"
+        }
+      ]
+    },
+    {
+      "id": "OPS-001",
+      "title": "Branch remediation: make main a real production branch",
+      "description": "origin/main has unrelated history. Follow RELEASE_POLICY.md §Branch remediation once the owner chooses an option.",
+      "source": "docs/autonomous-engineering-audit (2026-11-25) G3",
+      "approval": "OWNER_DECISION_NEEDED",
+      "priority": "P0",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Owner choice recorded",
+        "main contains dev history without force-pushing",
+        "Netlify production branch confirmed"
+      ],
+      "risk": "high",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-devops-engineer"
+      ],
+      "fileScope": [
+        "docs/engineering/RELEASE_POLICY.md"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Owner decision D-02"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "OPS-002",
+      "title": "Confirm Netlify deploy configuration and stop the production-labelled site using the dev database",
+      "description": "Record the actual Netlify production branch, contexts and environment-variable names. Treat the current site as a non-production environment until a production database exists.",
+      "source": "docs/autonomous-engineering-audit (2026-11-25) §10",
+      "approval": "OWNER_DECISION_NEEDED",
+      "priority": "P0",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Netlify settings documented by name only",
+        "Site labelled honestly"
+      ],
+      "risk": "high",
+      "securitySensitive": true,
+      "requiredAgents": [
+        "medyra-devops-engineer"
+      ],
+      "fileScope": [
+        "docs/engineering/RELEASE_POLICY.md",
+        "netlify.toml"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Needs Netlify dashboard access (owner)"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "OPS-003",
+      "title": "GitHub access for agents and migration of this backlog to GitHub Issues",
+      "description": "Install a GitHub App or fine-grained token (contents, pull-requests, issues) for the autonomous workflow; then mirror tasks to Issues with stable ids and make Issues canonical.",
+      "source": "Founder instruction 'Autonomous AI Engineering Department' §27 §12",
+      "approval": "OWNER_DECISION_NEEDED",
+      "priority": "P0",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Credential stored as a repository secret",
+        "One canonical queue"
+      ],
+      "risk": "high",
+      "securitySensitive": true,
+      "requiredAgents": [
+        "medyra-devops-engineer"
+      ],
+      "fileScope": [
+        ".github/**",
+        "scripts/engineering/**"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Owner decision D-04 (GitHub App vs token)"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "OPS-004",
+      "title": "Branch protection for dev and main",
+      "description": "Require PRs, the CI check and one human approval on dev and main; block force pushes and deletions.",
+      "source": "Founder instruction 'Autonomous AI Engineering Department' §27 §19",
+      "approval": "OWNER_DECISION_NEEDED",
+      "priority": "P0",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Protection rules active",
+        "Agents cannot push to dev or main"
+      ],
+      "risk": "high",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-devops-engineer"
+      ],
+      "fileScope": [
+        "docs/engineering/SETUP_GUIDE.md"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Repository admin action (owner)"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "DB-001",
+      "title": "Verify hosted dev migration parity (20261107000001, 20261108000001, 20261109000001)",
+      "description": "Run the read-only parity report through dev-migration.yml (mode=parity) with the scoped token, then decide whether to apply.",
+      "source": "docs/autonomous-engineering-audit (2026-11-25) B2",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P0",
+      "dependencies": [
+        "SEC-001"
+      ],
+      "acceptanceCriteria": [
+        "Parity report stored as workflow evidence",
+        "Pending migrations applied only with an owner migrate-dev approval"
+      ],
+      "risk": "high",
+      "securitySensitive": true,
+      "requiredAgents": [
+        "medyra-database-engineer",
+        "medyra-devops-engineer"
+      ],
+      "fileScope": [
+        "supabase/migrations/**"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "migration-compatibility",
+        "security-review"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Waiting for SEC-001 scoped token"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "FEAT-001",
+      "title": "Correct stale 'Coming to Medyra' right-rail copy",
+      "description": "The home right rail lists Communities and Mentorship matching as upcoming, but both are built. Show only modules that are genuinely not available yet, and remove the dead FUTURE_MODULES entries for built modules.",
+      "source": "Audit 03 #45; founder-designated controlled trial (§30 Phase H)",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P1",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "UPCOMING_FEATURES lists only unbuilt modules (Careers and internships)",
+        "No built module is described as planned",
+        "A test pins the list against the routes that exist",
+        "Card still says 'Planned. Not available yet.'"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-feature-engineer",
+        "medyra-qa-engineer",
+        "medyra-code-reviewer",
+        "medyra-documentation-steward"
+      ],
+      "fileScope": [
+        "src/features/home/**",
+        "src/components/layout/layout.test.tsx"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "READY",
+      "blockers": [],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "DOC-001",
+      "title": "Reconcile the roadmap with stable epic identifiers",
+      "description": "Replace reused phase numbers with epics; keep historical phase names as labels only.",
+      "source": "Founder instruction 'Autonomous AI Engineering Department' §27",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P1",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "docs/engineering/ROADMAP.md uses EPIC ids",
+        "CLAUDE.md roadmap points to it"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-product-steward"
+      ],
+      "fileScope": [
+        "docs/engineering/ROADMAP.md",
+        "CLAUDE.md"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "DONE",
+      "blockers": [],
+      "completionEvidence": "Bootstrap: docs/engineering/ROADMAP.md",
+      "history": [
+        {
+          "from": "READY",
+          "to": "DONE",
+          "at": "2026-11-25T00:00:00Z",
+          "by": "bootstrap",
+          "note": "implemented during system bootstrap; not processed through the engine"
+        }
+      ]
+    },
+    {
+      "id": "DOC-002",
+      "title": "Refresh README 'What is verified' and test counts from CI evidence",
+      "description": "README cites 348 tests; the measured count is 1,145. Update from the latest CI run, not by hand.",
+      "source": "docs/autonomous-engineering-audit (2026-11-25) G14",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P1",
+      "dependencies": [
+        "ENG-003"
+      ],
+      "acceptanceCriteria": [
+        "Counts match the cited CI run",
+        "Statements distinguish live-verified from unit-tested"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-documentation-steward"
+      ],
+      "fileScope": [
+        "README.md"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "docs-consistency"
+      ],
+      "state": "READY",
+      "blockers": [],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "QA-001",
+      "title": "Adopt Playwright for end-to-end tests",
+      "description": "Add @playwright/test as a devDependency and implement the suites in tests/e2e/PLAN.md against a synthetic-data environment.",
+      "source": "Founder instruction 'Autonomous AI Engineering Department' §27 §17",
+      "approval": "OWNER_DECISION_NEEDED",
+      "priority": "P1",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Dependency approved",
+        "Smoke suite runs in CI against a local build"
+      ],
+      "risk": "medium",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-qa-engineer"
+      ],
+      "fileScope": [
+        "tests/e2e/**",
+        "package.json",
+        "package-lock.json",
+        "playwright.config.ts"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Dependency approval D-07",
+        "Synthetic test environment D-08"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "QA-002",
+      "title": "Dependency-free preview smoke test",
+      "description": "HTTP smoke checks (health, redirects, security headers, environment label) usable by preview-validation.yml.",
+      "source": "Founder instruction 'Autonomous AI Engineering Department' §27",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P1",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Script exits non-zero on any failed check",
+        "Validated against the live Netlify site (read-only GETs)"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-qa-engineer"
+      ],
+      "fileScope": [
+        "scripts/engineering/smoke.ts"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "DONE",
+      "blockers": [],
+      "completionEvidence": "Bootstrap: scripts/engineering/smoke.ts; result recorded in docs/engineering/TRIAL_REPORT.md",
+      "history": [
+        {
+          "from": "READY",
+          "to": "DONE",
+          "at": "2026-11-25T00:00:00Z",
+          "by": "bootstrap",
+          "note": "implemented during system bootstrap; not processed through the engine"
+        }
+      ]
+    },
+    {
+      "id": "QA-003",
+      "title": "Browser review of communities, forums, messaging, mentorship and verification",
+      "description": "Exercise the Phase 6/7 and verification journeys with synthetic accounts only.",
+      "source": "docs/autonomous-engineering-audit (2026-11-25) B20",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P1",
+      "dependencies": [
+        "QA-001"
+      ],
+      "acceptanceCriteria": [
+        "Defects filed as tasks with reproduction steps"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-qa-engineer"
+      ],
+      "fileScope": [
+        "tests/e2e/**"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "browser",
+        "accessibility"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Needs QA-001 and a synthetic-data environment"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "SEC-003",
+      "title": "Content-Security-Policy in Report-Only mode",
+      "description": "Add a Report-Only CSP compatible with Supabase, Sentry and Next.js inline needs; measure before enforcing.",
+      "source": "PRODUCTION_READINESS blocker 9",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P1",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Header present in Report-Only",
+        "No functional regression in tests",
+        "Plan to enforce documented"
+      ],
+      "risk": "medium",
+      "securitySensitive": true,
+      "requiredAgents": [
+        "medyra-feature-engineer",
+        "medyra-security-reviewer"
+      ],
+      "fileScope": [
+        "next.config.ts"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "security-review"
+      ],
+      "state": "READY",
+      "blockers": [],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "SEC-004",
+      "title": "Prepare email delivery and two-step sign-in configuration",
+      "description": "Document exact Resend and TWO_FACTOR_SECRET setup and a validation checklist; no credentials created by agents.",
+      "source": "PRODUCTION_READINESS blocker 3",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P1",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Checklist in SETUP_GUIDE.md",
+        "Health endpoint expectations listed"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-documentation-steward"
+      ],
+      "fileScope": [
+        "docs/engineering/SETUP_GUIDE.md",
+        "EMAIL_SETUP.md"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "docs-consistency"
+      ],
+      "state": "READY",
+      "blockers": [],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "OPS-005",
+      "title": "Design scheduled retention, deletion and credential-expiry jobs",
+      "description": "Design (not activate) how run_retention_purge, expire_student_credentials and due_evidence_deletions run (pg_cron vs scheduled workflow).",
+      "source": "PRODUCTION_READINESS blocker 7",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P1",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "ADR written",
+        "No job activated without owner approval"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-database-engineer",
+        "medyra-security-reviewer"
+      ],
+      "fileScope": [
+        "docs/engineering/adr/**"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "docs-consistency"
+      ],
+      "state": "READY",
+      "blockers": [],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "OPS-006",
+      "title": "Monitoring preparation (Sentry, uptime, health)",
+      "description": "Document sanitized alert routing into maintenance.yml; no accounts created by agents.",
+      "source": "PRODUCTION_READINESS blocker 8",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P1",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "INCIDENT_RUNBOOK.md lists signal sources",
+        "No member data leaves the app"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-devops-engineer"
+      ],
+      "fileScope": [
+        "docs/engineering/INCIDENT_RUNBOOK.md",
+        "OBSERVABILITY.md"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "docs-consistency"
+      ],
+      "state": "READY",
+      "blockers": [],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "QA-004",
+      "title": "Validate admin and moderator workflows with synthetic accounts",
+      "description": "Admin queue, decisions, appeals, community moderation with synthetic staff accounts.",
+      "source": "docs/autonomous-engineering-audit (2026-11-25) B20",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P1",
+      "dependencies": [
+        "QA-001",
+        "SEC-004"
+      ],
+      "acceptanceCriteria": [
+        "Journeys pass in E2E"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-qa-engineer"
+      ],
+      "fileScope": [
+        "tests/e2e/**"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "browser"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Needs 2FA configuration and Playwright"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "OPS-007",
+      "title": "Prepare a separate production Supabase project",
+      "description": "Create and configure a production project (owner action) and its migration path.",
+      "source": "PRODUCTION_READINESS blocker 4",
+      "approval": "OWNER_DECISION_NEEDED",
+      "priority": "P2",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Project exists",
+        "Parity verified"
+      ],
+      "risk": "critical",
+      "securitySensitive": true,
+      "requiredAgents": [
+        "medyra-devops-engineer",
+        "medyra-database-engineer"
+      ],
+      "fileScope": [
+        "docs/engineering/RELEASE_POLICY.md"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Owner decision D-10 and paid plan"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "OPS-008",
+      "title": "Backup and recovery plan",
+      "description": "Document PITR/backups and a restore drill for the plan the owner chooses.",
+      "source": "PRODUCTION_READINESS blocker 10",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P2",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Runbook section written"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-devops-engineer"
+      ],
+      "fileScope": [
+        "docs/engineering/INCIDENT_RUNBOOK.md"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "docs-consistency"
+      ],
+      "state": "READY",
+      "blockers": [],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "DB-003",
+      "title": "Generate database types instead of hand-writing them",
+      "description": "Use supabase gen types from a local or CI database built from migrations.",
+      "source": "docs/autonomous-engineering-audit (2026-11-25) G13",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P2",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Generated file matches hand-written types or diffs are reviewed"
+      ],
+      "risk": "medium",
+      "securitySensitive": true,
+      "requiredAgents": [
+        "medyra-database-engineer"
+      ],
+      "fileScope": [
+        "src/lib/supabase/database.types.ts"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Needs the Supabase CLI in CI (dependency approval)"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "DB-004",
+      "title": "Trigram search indexes for member search",
+      "description": "New migration enabling pg_trgm and GIN trigram indexes used by directory search.",
+      "source": "PRODUCTION_READINESS blocker 12",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P2",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Migration passes PGlite (or documents extension limits)",
+        "EXPLAIN plan documented"
+      ],
+      "risk": "medium",
+      "securitySensitive": true,
+      "requiredAgents": [
+        "medyra-database-engineer",
+        "medyra-security-reviewer"
+      ],
+      "fileScope": [
+        "supabase/migrations/**",
+        "engineering/migrations.lock.json",
+        "supabase/tests/**"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "migration-compatibility",
+        "security-review"
+      ],
+      "state": "READY",
+      "blockers": [],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "SEC-005",
+      "title": "Remediate npm audit advisories",
+      "description": "Five moderate advisories (Sentry bundler-plugin chain, minimatch). Upgrade within semver where safe.",
+      "source": "docs/autonomous-engineering-audit (2026-11-25) 08",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P2",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "npm audit --omit=dev clean or justified"
+      ],
+      "risk": "medium",
+      "securitySensitive": true,
+      "requiredAgents": [
+        "medyra-maintenance-engineer"
+      ],
+      "fileScope": [
+        "package.json",
+        "package-lock.json"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "dependency-scan"
+      ],
+      "state": "READY",
+      "blockers": [],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "FEAT-002",
+      "title": "Community comment-removal UI for moderators",
+      "description": "Expose community_remove_comment to moderators in the comment list with a reason picker.",
+      "source": "CLAUDE.md (RPC exists, no UI)",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P2",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Moderators can remove comments with a reason",
+        "Members cannot see the control",
+        "Audit log entry created (PGlite)"
+      ],
+      "risk": "medium",
+      "securitySensitive": true,
+      "requiredAgents": [
+        "medyra-feature-engineer",
+        "medyra-qa-engineer"
+      ],
+      "fileScope": [
+        "src/features/communities/**",
+        "src/features/feed/components/**"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "security-review"
+      ],
+      "state": "READY",
+      "blockers": [],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "QA-005",
+      "title": "Accessibility baseline checks",
+      "description": "Automated axe checks in E2E once Playwright is approved.",
+      "source": "Founder instruction 'Autonomous AI Engineering Department' §27",
+      "approval": "OWNER_DECISION_NEEDED",
+      "priority": "P2",
+      "dependencies": [
+        "QA-001"
+      ],
+      "acceptanceCriteria": [
+        "Baseline report"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-qa-engineer"
+      ],
+      "fileScope": [
+        "tests/e2e/**"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Depends on QA-001"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "ENG-004",
+      "title": "Localisation architecture proposal (French UI)",
+      "description": "ADR comparing approaches for full EN/FR UI; implementation needs owner decision D-11.",
+      "source": "Founder instruction 'Autonomous AI Engineering Department' §27",
+      "approval": "APPROVED_REQUIREMENT",
+      "priority": "P2",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "ADR with recommendation"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-product-steward"
+      ],
+      "fileScope": [
+        "docs/engineering/adr/**"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "docs-consistency"
+      ],
+      "state": "READY",
+      "blockers": [],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "ENG-005",
+      "title": "Coverage baseline",
+      "description": "Measure coverage with @vitest/coverage-v8 and prevent unjustified drops.",
+      "source": "Founder instruction 'Autonomous AI Engineering Department' §27",
+      "approval": "OWNER_DECISION_NEEDED",
+      "priority": "P2",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Baseline recorded"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-qa-engineer"
+      ],
+      "fileScope": [
+        "vitest.config.mts",
+        "package.json"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Dependency approval D-07"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "FEAT-010",
+      "title": "Careers and job listings",
+      "description": "Approved roadmap epic. Needs the product steward to write stories and the owner to settle business rules before any implementation.",
+      "source": "CLAUDE.md roadmap",
+      "approval": "OWNER_DECISION_NEEDED",
+      "priority": "P3",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Stories with acceptance criteria approved by the owner"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-product-steward"
+      ],
+      "fileScope": [
+        "docs/engineering/ROADMAP.md"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "docs-consistency"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Business decisions required (OWNER_DECISIONS.md)"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "FEAT-011",
+      "title": "Employer and organisation profiles",
+      "description": "Approved roadmap epic. Needs the product steward to write stories and the owner to settle business rules before any implementation.",
+      "source": "CLAUDE.md roadmap",
+      "approval": "OWNER_DECISION_NEEDED",
+      "priority": "P3",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Stories with acceptance criteria approved by the owner"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-product-steward"
+      ],
+      "fileScope": [
+        "docs/engineering/ROADMAP.md"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "docs-consistency"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Business decisions required (OWNER_DECISIONS.md)"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "FEAT-012",
+      "title": "Professional verification",
+      "description": "Approved roadmap epic. Needs the product steward to write stories and the owner to settle business rules before any implementation.",
+      "source": "CLAUDE.md roadmap",
+      "approval": "OWNER_DECISION_NEEDED",
+      "priority": "P3",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Stories with acceptance criteria approved by the owner"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-product-steward"
+      ],
+      "fileScope": [
+        "docs/engineering/ROADMAP.md"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "docs-consistency"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Business decisions required (OWNER_DECISIONS.md)"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "FEAT-013",
+      "title": "Articles and research sharing",
+      "description": "Approved roadmap epic. Needs the product steward to write stories and the owner to settle business rules before any implementation.",
+      "source": "CLAUDE.md roadmap",
+      "approval": "OWNER_DECISION_NEEDED",
+      "priority": "P3",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Stories with acceptance criteria approved by the owner"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-product-steward"
+      ],
+      "fileScope": [
+        "docs/engineering/ROADMAP.md"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "docs-consistency"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Business decisions required (OWNER_DECISIONS.md)"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "FEAT-014",
+      "title": "Personal stories",
+      "description": "Approved roadmap epic. Needs the product steward to write stories and the owner to settle business rules before any implementation.",
+      "source": "CLAUDE.md roadmap",
+      "approval": "OWNER_DECISION_NEEDED",
+      "priority": "P3",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Stories with acceptance criteria approved by the owner"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-product-steward"
+      ],
+      "fileScope": [
+        "docs/engineering/ROADMAP.md"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "docs-consistency"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Business decisions required (OWNER_DECISIONS.md)"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "FEAT-015",
+      "title": "Nearby communities and events",
+      "description": "Approved roadmap epic. Needs the product steward to write stories and the owner to settle business rules before any implementation.",
+      "source": "CLAUDE.md roadmap",
+      "approval": "OWNER_DECISION_NEEDED",
+      "priority": "P3",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Stories with acceptance criteria approved by the owner"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-product-steward"
+      ],
+      "fileScope": [
+        "docs/engineering/ROADMAP.md"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "docs-consistency"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Business decisions required (OWNER_DECISIONS.md)"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "FEAT-016",
+      "title": "Peer-support spaces",
+      "description": "Approved roadmap epic. Needs the product steward to write stories and the owner to settle business rules before any implementation.",
+      "source": "CLAUDE.md roadmap",
+      "approval": "OWNER_DECISION_NEEDED",
+      "priority": "P3",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Stories with acceptance criteria approved by the owner"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-product-steward"
+      ],
+      "fileScope": [
+        "docs/engineering/ROADMAP.md"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review",
+        "docs-consistency"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Business decisions required (OWNER_DECISIONS.md)"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "ENG-006",
+      "title": "Activate unattended execution",
+      "description": "Enable autonomous-development.yml in execute mode after the activation checklist in AUTONOMOUS_ENGINEERING.md passes.",
+      "source": "Founder instruction 'Autonomous AI Engineering Department' §27 §30 Phase J",
+      "approval": "OWNER_DECISION_NEEDED",
+      "priority": "P1",
+      "dependencies": [
+        "ENG-003",
+        "SEC-001",
+        "OPS-003",
+        "OPS-004"
+      ],
+      "acceptanceCriteria": [
+        "Every checklist item ticked by the owner"
+      ],
+      "risk": "high",
+      "securitySensitive": true,
+      "requiredAgents": [
+        "medyra-orchestrator"
+      ],
+      "fileScope": [
+        "engineering/control.json"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "BLOCKED",
+      "blockers": [
+        "Owner activation"
+      ],
+      "completionEvidence": null,
+      "history": []
+    },
+    {
+      "id": "ENG-007",
+      "title": "Allow two concurrent implementation tasks",
+      "description": "After isolation and recovery are proven in production use, raise maxConcurrentImplementations to 2.",
+      "source": "Founder instruction 'Autonomous AI Engineering Department' §27 §15",
+      "approval": "PROPOSED_BY_AGENT",
+      "priority": "P2",
+      "dependencies": [
+        "ENG-006"
+      ],
+      "acceptanceCriteria": [
+        "Two disjoint tasks complete without conflict"
+      ],
+      "risk": "low",
+      "securitySensitive": false,
+      "requiredAgents": [
+        "medyra-orchestrator"
+      ],
+      "fileScope": [
+        "engineering/control.json"
+      ],
+      "requiredGates": [
+        "lint",
+        "typecheck",
+        "unit",
+        "pglite",
+        "build",
+        "secret-scan",
+        "code-review"
+      ],
+      "state": "PROPOSED",
+      "blockers": [],
+      "completionEvidence": null,
+      "history": []
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+# 13 · Gap analysis
+
+Gaps between today's setup and a production-grade autonomous engineering system. "Human auth" = requires the owner's authorization or action.
+
+| # | Severity | Gap | Current state | Required state | Recommended solution | Relevant files | Complexity | Security impact | Human auth |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| G1 | Critical | Owner-level DB credential reachable by agents | `SUPABASE_ACCESS_TOKEN` in `.env.local`; readiness blocker 1 unresolved | Scoped dev-only token held by CI; agents denied `.env.local` | Revoke/rotate; scoped token as CI secret; `permissions.deny` + PreToolUse hook blocking secret paths | `.env.local`, `scripts/seed/{migrate,audit,wipe,reset}.ts` | Low | High | Yes |
+| G2 | Critical | No CI quality gate | No `.github/workflows`; push deploys | Lint/typecheck/test/build on PR + push; required checks | GitHub Actions workflow running the 4 commands (Node 22) | `package.json`, new `.github/workflows/` | Low | Medium | Yes (repo settings) |
+| G3 | Critical | No safe branch/release model | Direct pushes to `dev`; `main` unrelated; Netlify prod branch unknown | Feature branches/worktrees → PR → integration → gated production | Re-base `main` on `dev` (decision), branch protection, PR previews | `DEPLOYMENT.md`, Netlify settings | Medium | High | Yes |
+| G4 | Critical | No permission boundaries for agents | No settings.json, no hooks, Windows = no sandbox | Allow/deny lists, protected paths, sandbox (WSL2 or CI containers) | Project `.claude/settings.json` (versioned), hooks for secrets/destructive scripts, run autonomous jobs in CI/WSL2 | `.claude/`, `.gitignore` | Medium | High | Yes |
+| G5 | High | No persistent task queue / backlog | Requirements in chat + `CLAUDE.md` | Machine-readable backlog with status, owner, locks | GitHub Issues (needs `gh`/token) or a versioned `backlog.json`/markdown with lock fields | `04-ROADMAP-AND-BACKLOG.md` | Medium | Low | Decision |
+| G6 | High | No unattended execution | Desktop app only | Runs with PC off | `claude-code-action` workflows (scheduled + on events) or cloud routines | `.github/workflows/` | Medium | Medium | Yes (tokens, plan) |
+| G7 | High | No independent review | Author self-review | Separate code + security reviewers gating merges | Project subagents with read-only tools; required review step in workflow | `.claude/agents/` | Low | High | No |
+| G8 | High | Migrations decoupled from deploys | Applied manually with PAT; code shipped first | Migration job before/with deploy; parity check | CI job: PGlite tests → apply to dev (scoped token) → `db:audit` parity → deploy | `supabase/migrations/`, `scripts/seed/migrate.ts` | Medium | High | Yes for prod |
+| G9 | High | No E2E/browser tests | Manual `TESTING.md` | Playwright suite on previews for core flows | Add Playwright + seeded test accounts (dev only) | `TESTING.md`, `scripts/seed/` | Medium | Low | Decision (new dep) |
+| G10 | High | No observability for incident agents | Sentry/uptime/Upstash off | Error + uptime signals routed to maintenance agent | Configure Sentry DSN, uptime monitor, alert webhook → workflow | `src/lib/monitoring/`, `OBSERVABILITY.md` | Medium | Low | Yes (accounts) |
+| G11 | High | No project-specific agents/skills | Generic plugin agents | Roster in `12` with Medyra invariants | Write `.claude/agents/*.md` + project skills (migration, RLS review, release) | `.claude/` | Medium | Medium | No |
+| G12 | High | No budget/concurrency/emergency stop | None | Per-run `--max-budget-usd`, daily caps, concurrency group, kill switch | Workflow `concurrency`, repo variable kill switch checked by every job, token revocation runbook | `.github/workflows/` | Low | Medium | Yes (limits) |
+| G13 | Medium | Hot shared files cause conflicts | `database.types.ts`, `rate-limit.ts`, `proxy.ts`, `format.ts`, report RPCs re-created per migration | Fewer collision points | Generate DB types; one owner (DB agent) per migration; serialize migration tasks | listed files | Medium | Low | No |
+| G14 | Medium | Stale/contradictory docs | Roadmap numbering, README test count, `UPCOMING_FEATURES` | Docs regenerated from source of truth | Docs-steward agent; derive counts in CI | `CLAUDE.md`, `README.md`, `src/features/home/content.ts` | Low | Low | No |
+| G15 | Medium | Live DB parity unknown | 3 newest migrations' status unknown | Automated parity report | Scheduled `db:audit` in CI (read-only token) | `DATABASE_AUDIT.md` | Low | Medium | Yes (token) |
+| G16 | Medium | No dependency update flow | Manual; 5 moderate advisories | Weekly update PRs with tests | Dependabot/Renovate or scheduled agent | `package.json` | Low | Medium | Yes (enable) |
+| G17 | Medium | No GitHub tooling for agents | No `gh`, no GitHub MCP | PR/issue management | Install `gh` with fine-grained token, or GitHub MCP | — | Low | Medium | Yes |
+| G18 | Medium | No hosting control | No Netlify CLI/token | Preview status, deploy logs, rollback via API | Netlify token (read + deploy previews only) or rely on GitHub checks | `netlify.toml` | Low | Medium | Yes |
+| G19 | Medium | Product background jobs unscheduled | Purge, expiry, evidence deletion manual | Scheduled with alerts | `pg_cron` or scheduled workflow calling a protected job | migrations `20261102000002`, `20261105000001` | Medium | Medium | Yes |
+| G20 | Medium | OneDrive-hosted repo | Sync can interfere with worktrees/builds | Local or CI checkout for agents | Move working copy or use CI/cloud | — | Low | Low | Decision |
+| G21 | Medium | `.claude/` git-ignored | Agent config not shared or reviewed | Versioned agent config (minus secrets) | Un-ignore `.claude/{agents,skills,settings.json}`; keep `settings.local.json` ignored | `.gitignore` | Low | Low | Decision |
+| G22 | Low | Irrelevant skills/agents loaded | Vercel, video, RN, GraphQL, Temporal | Minimal, relevant toolset per agent | Restrict `skills`/`tools` per subagent | `.claude/skills/`, settings | Low | Low | Decision |
+| G23 | Low | No coverage or formatter | — | Coverage report, Prettier | Optional | config | Low | Low | Decision |
+| G24 | Low | Approximate unread counts, comment-removal UI, Pinecone unused | Known debt | Backlog items | Backlog | see `03` | Low-Med | Low | No |
+
+Product/legal blockers (B4-B6, B10-B17 in `04`) are not engineering-automation gaps but cap what autonomy can deliver: agents can prepare, not approve, them.

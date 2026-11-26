@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.*.local)",
+      "Read(./.env.production)",
+      "Read(./.env.development)",
+      "Read(./scripts/.seed-output/**)",
+      "Read(./scripts/.backup/**)",
+      "Read(~/.claude/.credentials.json)",
+      "Read(~/.git-credentials)",
+      "Bash(npm run db:reset:dev:*)",
+      "Bash(npm run db:migrate:*)",
+      "Bash(npm run seed:wipe:*)",
+      "Bash(npm run seed:clean:*)",
+      "Bash(npm run seed:dev:*)",
+      "Bash(npm run seed:verification:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(npx netlify deploy:*)",
+      "Bash(netlify deploy:*)",
+      "Bash(npx vercel:*)",
+      "Bash(npx supabase db push:*)",
+      "Bash(npx supabase db reset:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(gh pr merge:*)"
+    ],
+    "disableBypassPermissionsMode": "disable"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell|Read|Edit|Write|MultiEdit|NotebookEdit|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-tool-guard.mjs\""
+          }
+        ]
+      }
+    ]
+  }
+}

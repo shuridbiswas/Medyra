@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "approvals": [
+    {
+      "taskId": "FEAT-001",
+      "scope": "execute",
+      "approvedBy": "owner",
+      "at": "2026-11-25T00:00:00Z",
+      "reference": "Founder instruction 'MEDYRA | AUTONOMOUS AI ENGINEERING DEPARTMENT' §30 Phase H: preferred controlled trial is correcting the stale UPCOMING_FEATURES copy. No push, merge or deploy authorized."
+    }
+  ]
+}

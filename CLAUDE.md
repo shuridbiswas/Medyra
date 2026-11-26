@@ -199,12 +199,12 @@ Read ARCHITECTURE.md for decisions and risks. Conventions:
 
 ## Roadmap
 
-1. **Phase 2 (done):** Supabase auth, onboarding, profile basics, RLS from day one.
-2. **Phase 3 (done):** Professional profiles.
-3. **Phase 4 (done):** Member home page and community feed (posts, likes, comments, categories, search).
-4. **Phase 4b (connections, follows, blocking, saved posts, notifications: done):** still to do: communities, reporting and moderation tooling.
-5. **Phase 5:** Verification badges. (Forums and communities shipped in Phase 6; messaging and mentorship in Phase 7.)
-6. **Phase 6:** Careers and employer profiles, articles/research, stories.
-7. **Phase 7:** Nearby communities and events, mental-health and peer-support space with human + AI-assisted moderation, reporting/blocking/muting.
+The roadmap now uses stable epic ids in `docs/engineering/ROADMAP.md`; task state lives in `engineering/backlog.json`. Phase numbers above are historical labels only: the shipped "Phase 6" (communities, forums) and "Phase 7" (messaging, mentorship) are not the original Phase 6/7 items. Still planned: careers and employer profiles, professional verification, articles/research, stories, nearby communities and events, peer-support spaces (EPIC-CAREERS … EPIC-SUPPORT).
+
+## Autonomous engineering
+
+Ten `medyra-*` agents (`.claude/agents/`) and seventeen `medyra-*` skills (`.claude/skills/`) run approved backlog work through the deterministic orchestrator (`npm run eng -- status|report|next|cycle`). Start with `docs/engineering/AUTONOMOUS_ENGINEERING.md`; resume work with `docs/engineering/SESSION_RECOVERY.md`. Owner-only files: `engineering/{control,approvals,policy}.json`, `.claude/settings.json`, `.claude/hooks/`. The guard hook blocks secrets and destructive commands for every session; it is not to be bypassed. Unattended execution is off until the activation checklist is complete.
+
+Usage governor (`docs/engineering/USAGE_GOVERNOR.md`): every AI run must be admitted by `scripts/engineering/lib/governor.ts` (25 % of the weekly subscription allowance paced by day, 10 % of each five-hour allowance, subscription only, fail closed without fresh status line telemetry). `npm run usage:status` shows the state without using Claude. Never bypass it, launch `claude -p` from an agent, set `ANTHROPIC_API_KEY`, or commit `engineering/.local/` (personal usage figures).
 
 Open product questions: professional verification method, anonymity vs. safety design, launch regions (privacy law and crisis resources), handling of minors, MVP cut line.

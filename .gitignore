@@ -40,7 +40,24 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-.claude/
+
+# Claude Code: version only the project engineering configuration. Everything else under .claude/
+# (local settings, worktrees, transcripts, agent memory, third-party skill symlinks) stays local.
+.claude/*
+!.claude/settings.json
+!.claude/agents/
+!.claude/hooks/
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/medyra-*/
+.claude/settings.local.json
+
+# Autonomous engineering: runtime lock and temp files (state files are versioned)
+engineering/.mutex
+# Usage governor ledger and runtime files: personal subscription figures, never committed
+engineering/.local/
+engineering/*.tmp
+engineering/runs/*.tmp
 *.tsbuildinfo
 supabase/.temp/
 supabase/.branches/

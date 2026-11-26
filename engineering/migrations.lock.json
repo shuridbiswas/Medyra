@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "files": {
+    "20261028000001_profiles_and_onboarding.sql": "bf208723e00e42f532ffb794eb1e332a3a2f627447eb53a990de204cea6bddbd",
+    "20261028000002_avatars_storage.sql": "f38c7cd0450f72d15f72cfd4ee774ace9c8366111c8ccb3676ce98012fc63878",
+    "20261029000001_profile_system.sql": "67afd6faf5eea5f2ca6c3fcb25ac97693743391ac0b044fc2475e97bb184e395",
+    "20261030000001_posts_and_interactions.sql": "4989d29999d8561c8f7e2fe9b7d9d37411e6fe00d2d737ddba3756452dc35bb9",
+    "20261031000001_notification_preferences.sql": "dddb297242e25bccdf69ece7fc97d48213be45a9dfda3c45a9f4776a1d11d251",
+    "20261101000001_network.sql": "8959b30c42d29057f5a8e93435d1dac3b48078aefa2725e397a6da007310592d",
+    "20261102000001_safety_and_moderation.sql": "2d962f51cb1e118c7f5d79c4e34bcfd656fc58dee51826beb63462d5ee6e96b6",
+    "20261102000002_account_security_and_privacy.sql": "8008728cf550460b2ed5849ddcac4c8b42945d1cd98f13603e8ca8c8f098549c",
+    "20261103000001_communities_and_forums.sql": "3ff3736b1764c78edd64b9acac93c246b354d0bf0804a3f5d3bd10bc800203e0",
+    "20261104000001_messaging_and_mentorship.sql": "aef2c7bd9e9451f1ecbb65b15e766cae8aae9cf2c3146fad6142db4848b0ea62",
+    "20261105000001_student_verification.sql": "481cc8a5785e256af5299d3e8039c30255534a7e3c216e935fd74addb8ef8bfc",
+    "20261106000001_audit_log_account_deletion.sql": "03763d0673bf6fa500cc9d1975fcf358d2213d6f340650982acf09aeef8d626b",
+    "20261107000001_provider_verification.sql": "3296e4df89e33dc06e953d134ffcc414a53db1fed0532b61f6b90879f827f23e",
+    "20261108000001_provider_requests.sql": "7fc025388e26cee17d7b1e0ff2a027a4c53b18ce32d12af276e42885453e113f",
+    "20261109000001_student_sso_documents.sql": "685f9f1dc841a84371443700aa9dae29b588f7cbe19e94c656ad656493308afd"
+  }
+}

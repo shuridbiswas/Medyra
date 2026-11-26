@@ -1,0 +1,132 @@
+# Autonomous development cycle. Manual dispatch only until the owner completes the activation
+# checklist (docs/engineering/AUTONOMOUS_ENGINEERING.md). The deterministic orchestrator decides
+# what may run; Claude implements inside that decision. One cycle at a time (concurrency group).
+#
+# Requires, set by the owner:
+#   repository variables  MEDYRA_AUTONOMY_ENABLED=true, MEDYRA_AUTONOMY_PAUSED=false (kill switch)
+#   environment           "autonomy" with a required reviewer (approves each execute run)
+#   environment secret    CLAUDE_CODE_OAUTH_TOKEN (subscription). API keys are prohibited by the usage governor.
+#
+# The usage governor (docs/engineering/USAGE_GOVERNOR.md) must admit every run. Its telemetry comes from
+# Claude Code's status line on the founder's machine, which a GitHub runner does not have, so this job
+# is refused (TELEMETRY) until a CI telemetry source is documented and approved. That is intended.
+#   engineering/control.json  autonomy.executionEnabled=true (owner-only file)
+name: autonomous-development
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run plans only; manual executes one task"
+        type: choice
+        options: [dry-run, manual]
+        default: dry-run
+  # schedule:
+  #   - cron: "17 */6 * * *"   # enable only after activation (task ENG-006) and set mode to scheduled
+
+permissions:
+  contents: read
+
+concurrency:
+  group: medyra-autonomy
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: preflight and plan (no AI)
+    if: vars.MEDYRA_AUTONOMY_PAUSED != 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Plan
+        env:
+          MEDYRA_AUTONOMY_PAUSED: ${{ vars.MEDYRA_AUTONOMY_PAUSED }}
+        run: |
+          npm run -s eng -- validate
+          npm run -s eng -- cycle --mode dry-run | tee plan.json
+          {
+            echo '## Plan (dry run)'
+            echo '```json'; cat plan.json; echo '```'
+            npm run -s eng -- report
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  execute:
+    name: execute one task
+    needs: plan
+    if: inputs.mode == 'manual' && vars.MEDYRA_AUTONOMY_ENABLED == 'true' && vars.MEDYRA_AUTONOMY_PAUSED != 'true'
+    runs-on: ubuntu-24.04
+    environment: autonomy
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: write
+    env:
+      MEDYRA_AUTONOMY_PAUSED: ${{ vars.MEDYRA_AUTONOMY_PAUSED }}
+      RUN_BUDGET_USD: ${{ vars.MEDYRA_RUN_BUDGET_USD || '5' }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Load durable state from the engineering-state branch
+        run: |
+          git config user.name "medyra-orchestrator[bot]"
+          git config user.email "medyra-orchestrator@users.noreply.github.com"
+          if git ls-remote --exit-code origin engineering-state >/dev/null; then
+            git fetch origin engineering-state
+            git checkout origin/engineering-state -- engineering/
+          fi
+      - name: Usage governor admission (fails closed; prints codes only, never usage figures)
+        run: npm run -s usage:admit
+      - name: Preflight and claim (deterministic)
+        id: claim
+        run: |
+          npm run -s eng -- preflight --mode manual
+          npm run -s eng -- cycle --mode manual --owner "gha-${{ github.run_id }}" | tee claim.json
+          echo "run_id=$(node -e "const j=require('./claim.json');process.stdout.write(j.runId||'')")" >> "$GITHUB_OUTPUT"
+      - name: Persist claim before any AI work
+        if: steps.claim.outputs.run_id != ''
+        run: scripts/engineering/push-state.sh "claim ${{ steps.claim.outputs.run_id }}"
+      - name: Claude executes the claimed run
+        if: steps.claim.outputs.run_id != ''
+        uses: anthropics/claude-code-action@4411a9e9b0283becf4b924f7bce360fd7756c78c # v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: --max-turns 60 --max-budget-usd ${{ env.RUN_BUDGET_USD }}
+          prompt: |
+            You are medyra-orchestrator (.claude/agents/medyra-orchestrator.md). Execute run
+            ${{ steps.claim.outputs.run_id }} following .claude/skills/medyra-orchestration/SKILL.md and the brief
+            engineering/runs/${{ steps.claim.outputs.run_id }}.brief.md. Work only on the run's branch, push only that
+            branch, open a PR to dev, and stop at AWAITING_APPROVAL, READY_TO_MERGE, BLOCKED or FAILED.
+            Never merge. Never edit engineering/control.json, approvals.json or policy.json.
+      - name: Record spend (conservative estimate = per-run cap until actual cost is parsed)
+        if: always() && steps.claim.outputs.run_id != ''
+        run: npm run -s eng -- usage --run "${{ steps.claim.outputs.run_id }}" --usd "$RUN_BUDGET_USD" --kind estimated --source "per-run cap (claude-code-action)"
+      - name: Persist state
+        if: always() && steps.claim.outputs.run_id != ''
+        run: scripts/engineering/push-state.sh "run ${{ steps.claim.outputs.run_id }}"
+      - name: Trigger CI on the task branch (GITHUB_TOKEN pushes do not trigger workflows)
+        if: success() && steps.claim.outputs.run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch=$(node -e "const r=require('./engineering/runs/${{ steps.claim.outputs.run_id }}.json');process.stdout.write(r.branch)")
+          if git ls-remote --exit-code origin "$branch" >/dev/null; then gh workflow run ci.yml --ref "$branch"; fi
+      - name: Report
+        if: always()
+        run: npm run -s eng -- report >> "$GITHUB_STEP_SUMMARY"

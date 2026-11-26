@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "auditDate": "2026-11-25",
+  "identity": {
+    "name": "Medyra",
+    "formerName": "Medoras",
+    "description": "Professional and social network exclusively for the healthcare and social-services ecosystem",
+    "repository": "https://github.com/shuridbiswas/Medyra.git",
+    "branch": "dev",
+    "headCommit": "008e7543835d3afb67f8dc6592b8922c2d40170b",
+    "headCommitDate": "2026-11-18",
+    "mainBranchNote": "origin/main has unrelated history (initial commit + README); all app work is on dev",
+    "maturity": "pre-launch alpha; dev database with fictional data only",
+    "targetRegion": "Quebec/Montreal (implied, not formally decided)",
+    "languages": { "ui": ["en"], "partialFr": ["student verification"] },
+    "businessModel": "unknown",
+    "canonicalRequirements": "CLAUDE.md"
+  },
+  "stack": {
+    "frontend": { "next": "16.4.6", "react": "19.3.0", "typescript": "^5 strict", "tailwind": "^4", "ui": "shadcn (Base UI) + lucide", "validation": "zod ^4.6.7", "i18n": "none", "stateManagement": "none" },
+    "backend": { "pattern": "Next.js Server Actions + 6 route handlers", "auth": "Supabase Auth email/password via @supabase/ssr ^0.12.7", "mfa": "app-level emailed code (unconfigured)", "authorization": "Postgres RLS + security definer RPCs + private schema helpers", "rateLimit": "DB hard limits (active) + Upstash (off)", "email": "Resend (off)", "errors": "Sentry (off)", "semanticSearch": "Pinecone (code present, unused)", "jobs": "none scheduled" },
+    "database": { "provider": "Supabase Postgres (dev project only)", "migrations": 15, "tables": 67, "publicRpcFunctions": 59, "migrationTool": "plain SQL via Management API (npm run db:migrate, needs PAT)", "types": "hand-written src/lib/supabase/database.types.ts", "tests": "PGlite in-memory with auth/storage stubs", "liveParity": "12/12 applied as of 2026-11-09; 3 newer migrations unknown or not applied", "productionDatabase": false },
+    "infrastructure": { "hosting": "Netlify (OpenNext adapter, Node 22)", "liveSite": "medyraapp.netlify.app (production context, uses dev DB)", "ci": "none", "monitoring": "none", "customDomain": false, "csp": false }
+  },
+  "architecture": {
+    "layout": ["src/app", "src/features/<module>", "src/lib", "src/components", "supabase/migrations", "supabase/tests", "scripts/seed", "docs/verification"],
+    "invariants": [
+      "only the publishable Supabase key; never a service-role key",
+      "every server action starts with a session gate and validates with zod",
+      "author ids come only from the verified session",
+      "notifications never carry content text",
+      "anonymous forum authors exist only in forum_identity",
+      "re-grant private helper functions after revoke in every migration",
+      "never edit applied migrations",
+      "honest-limits copy must stay true; legal pages keep DraftNotice until counsel approves"
+    ]
+  },
+  "features": {
+    "counts": { "identified": 57, "complete": 37, "completeVerified": 9, "completeUnverified": 28, "partial": 7, "placeholder": 1, "planned": 12, "broken": 0 },
+    "verified": ["welcome page", "email/password auth", "onboarding", "session routing/proxy", "profiles", "home feed", "member directory", "connections and follows", "saved items"],
+    "unverified": ["info/legal draft pages", "two-step email code (unconfigured)", "re-auth and session controls", "blocking", "muting", "notifications", "reporting", "admin moderation (closed until 2FA configured)", "suspension and appeals", "profile privacy", "data export", "deletion requests", "consent records", "retention purge function", "communities", "forums", "anonymous posting", "educational second-opinion framing", "messaging", "mentorship", "student verification", "verified student badge", "institutional email challenge", "external provider layer (simulator)", "university SSO and document analysis (simulator)", "settings", "feedback links", "home right rail (stale copy)"],
+    "partial": ["scheduled maintenance jobs", "app-level rate limiting", "error reporting", "semantic search", "health endpoint", "dev seed tooling", "French localisation"],
+    "placeholder": ["careers"],
+    "planned": ["careers and jobs", "employer/organisation profiles", "professional/employer verification", "articles/research", "stories", "events/nearby communities", "peer-support space", "AI moderation", "post media", "mentions", "email/push notifications", "per-field privacy and username change"]
+  },
+  "roadmap": {
+    "completedPhases": ["1 welcome", "2 auth/onboarding", "3 profiles", "4 feed", "4b network", "4A security/safety/privacy", "6 communities/forums", "7 messaging/mentorship", "student verification", "provider/SSO scaffolding"],
+    "currentPhase": "none declared",
+    "nextDocumentedItem": "careers and employer profiles",
+    "conflict": "CLAUDE.md roadmap numbers Phase 6/7 differently from shipped Phase 6/7"
+  },
+  "backlog": [
+    { "id": "B1", "priority": "P0", "item": "revoke/scope Supabase personal access token", "approved": true },
+    { "id": "R1", "priority": "P0", "item": "add CI (lint, typecheck, test, build)", "approved": false },
+    { "id": "R2", "priority": "P0", "item": "resolve main vs dev and Netlify production branch", "approved": false },
+    { "id": "B2", "priority": "P0", "item": "apply and verify pending migrations on dev", "approved": true },
+    { "id": "B3", "priority": "P1", "item": "email delivery + TWO_FACTOR_SECRET", "approved": true },
+    { "id": "B20", "priority": "P1", "item": "browser/E2E review of Phase 6/7 and verification", "approved": true },
+    { "id": "B9", "priority": "P1", "item": "Content-Security-Policy", "approved": true },
+    { "id": "B7", "priority": "P1", "item": "schedule maintenance jobs", "approved": true },
+    { "id": "B8", "priority": "P1", "item": "monitoring and uptime", "approved": true },
+    { "id": "R3", "priority": "P1", "item": "fix stale UPCOMING_FEATURES and roadmap numbering", "approved": false },
+    { "id": "B4", "priority": "P2", "item": "production Supabase project", "approved": true },
+    { "id": "B10", "priority": "P2", "item": "backups and restore test", "approved": true },
+    { "id": "B12", "priority": "P2", "item": "trigram search indexes", "approved": true },
+    { "id": "R4", "priority": "P2", "item": "community comment-removal UI", "approved": false },
+    { "id": "R5", "priority": "P2", "item": "generate DB types", "approved": false },
+    { "id": "R6", "priority": "P2", "item": "npm audit remediation", "approved": false },
+    { "id": "P1", "priority": "P3", "item": "careers and employer profiles", "approved": true }
+  ],
+  "claudeEnvironment": {
+    "client": "Claude desktop app (Code tab), Windows 11 Enterprise",
+    "claudeCodeVersion": "unknown",
+    "shells": ["Git Bash", "Windows PowerShell 5.1"],
+    "cliInstalled": { "claude": false, "gh": false, "netlify": false, "supabase": false, "git": true, "docker": true, "node": "24.22.1" },
+    "projectConfig": { "CLAUDE.md": true, "AGENTS.md": true, "claudeDirGitIgnored": true, "settingsJson": false, "agents": 0, "commands": 0, "rules": 0, "hooks": 0, "mcpJson": false, "launchJson": true, "githubWorkflows": 0 },
+    "userConfig": { "enabledPlugins": 7, "marketplaces": 5, "userSkills": 5, "permissions": "none", "hooks": "plugin SessionStart only" },
+    "sandbox": "unsupported on native Windows; not configured",
+    "memory": "no auto-memory directory for this project"
+  },
+  "existingAgents": { "project": [], "pluginAndBuiltIn": ["general-purpose", "Explore", "Plan", "claude-code-guide", "statusline-setup", "fork", "web-fetch", "backend-development x8", "full-stack-orchestration x4", "javascript-typescript x2", "apify"] },
+  "skills": {
+    "project": ["supabase", "supabase-postgres-best-practices", "vercel-react-best-practices", "vercel-composition-patterns", "vercel-react-view-transitions", "web-design-guidelines", "writing-guidelines", "deploy-to-vercel", "vercel-cli-with-tokens", "vercel-optimize", "vercel-react-native-skills", "brag", "hyperframes", "hyperframes-cli", "hyperframes-registry", "media-use"],
+    "irrelevant": ["deploy-to-vercel", "vercel-cli-with-tokens", "vercel-optimize", "vercel-react-native-skills", "brag", "hyperframes", "hyperframes-cli", "hyperframes-registry", "media-use"],
+    "user": ["find-skills", "hyperframes", "hyperframes-cli", "hyperframes-registry", "media-use"],
+    "missingProjectSpecific": ["migration authoring", "RLS/anonymity invariant review", "Netlify release and smoke check", "Playwright E2E", "legal/honest-limits copy guard", "dev-DB safety"]
+  },
+  "plugins": ["watch@claude-video", "full-stack-orchestration@claude-code-workflows", "javascript-typescript@claude-code-workflows", "backend-development@claude-code-workflows", "superpowers@claude-plugins-official", "ui-ux-pro-max@ui-ux-pro-max-skill", "ponytail@ponytail"],
+  "mcpIntegrations": {
+    "project": [],
+    "appOrAccountLevel": ["Claude built-in browser", "Claude in Chrome", "computer-use", "desktop session/PR/settings tools", "scheduled-tasks", "terminal", "visualize", "mcp-registry", "Google Drive", "Perplexity", "docs connector", "Apify (failed to load)"],
+    "missing": ["GitHub (gh or MCP)", "Supabase MCP", "Netlify", "Sentry", "issue tracker"]
+  },
+  "testing": {
+    "commands": { "lint": "npm run lint", "typecheck": "npm run typecheck", "test": "npm test", "build": "npm run build", "liveDevChecks": "npm run seed:verify", "dbAudit": "npm run db:audit" },
+    "lastRun": { "date": "2026-11-25", "lint": "pass", "typecheck": "pass", "tests": "71 files, 1145 passed", "npmAuditProd": "5 moderate", "build": "not run" },
+    "missing": ["E2E/browser", "coverage", "formatter", "pre-commit hooks", "CI", "a11y", "performance"]
+  },
+  "deployment": {
+    "provider": "Netlify",
+    "trigger": "git push (no CI gate)",
+    "environments": { "local": true, "devDatabase": true, "preview": "described", "staging": false, "productionDatabase": false },
+    "migrationDeployment": "manual, decoupled from code deploys",
+    "rollback": "Netlify publish previous deploy; DB forward-only",
+    "humanApprovalRequired": ["production promotion", "production migrations", "DNS/domain", "secrets/accounts/paid services"]
+  },
+  "securityBoundaries": {
+    "risks": ["SUPABASE_ACCESS_TOKEN in .env.local", "VERIFICATION_SECRET on disk", "seed passwords in scripts/.seed-output", "push equals deploy", "destructive dev scripts runnable by agents", "no sandbox on Windows", "no deny rules"],
+    "recommended": ["deny reads of .env.local, ~/.claude/.credentials.json, scripts/.seed-output", "scoped dev-only token as CI secret", "agents create migrations; CI applies to dev; humans approve production", "feature branches/worktrees + PR gates", "human sign-off on auth, RLS, private schema, anonymity, verification, legal copy", "no new vendors, paid services or dependencies without approval"]
+  },
+  "autonomousExecution": {
+    "maturityLevel": "1 of 5 (agent-assisted, human-triggered)",
+    "runsWithPcOff": false,
+    "options": {
+      "githubActionsClaudeCodeAction": "available, not configured; needs token secret",
+      "cloudRoutines": "plan-dependent; research preview; min 1h interval",
+      "cloudSessions": "plan-dependent",
+      "headlessCli": "available after CLI install",
+      "agentSdk": "available; needs API key and host",
+      "desktopScheduledTasks": "available; PC must be on",
+      "agentTeams": "experimental; interactive only"
+    },
+    "missing": ["task queue", "locks", "retries", "budget caps", "concurrency control", "emergency stop", "observability"]
+  },
+  "recommendedAgents": [
+    { "name": "orchestrator", "mode": "permanent" },
+    { "name": "product-roadmap-steward", "mode": "weekly" },
+    { "name": "fullstack-feature-engineer", "mode": "on demand, 1-3 parallel" },
+    { "name": "database-rls-engineer", "mode": "mandatory for migrations" },
+    { "name": "qa-browser-engineer", "mode": "per PR" },
+    { "name": "security-privacy-reviewer", "mode": "per sensitive PR + weekly" },
+    { "name": "code-reviewer", "mode": "per PR" },
+    { "name": "devops-release-engineer", "mode": "on demand + scheduled checks" },
+    { "name": "documentation-steward", "mode": "per merged PR" },
+    { "name": "maintenance-incident-engineer", "mode": "daily + on alert" }
+  ],
+  "missingCapabilities": ["CI", "branch protection and PR flow", "agent permission rules", "persistent backlog", "unattended runner", "independent review agents", "E2E tests", "observability", "GitHub CLI/MCP", "Netlify control", "scheduled product jobs", "budget and kill switch"],
+  "blockers": ["B1 token revocation", "B2 migration parity", "B3 email + 2FA secret", "B4 production project", "B5 legal review", "B6 moderation staffing", "B7 scheduled jobs", "B8 monitoring", "B9 CSP", "B10 backups", "B11 invite-only decision", "B12 search indexes", "B14 pen test", "B15 forum_identity policy", "B16 messaging retention/minors", "B17 verification PIA/vendors", "B18 no CI", "B19 main/dev split", "B20 no live browser review"],
+  "unresolvedDecisions": ["token revocation", "autonomy level per action", "branch model", "budget caps", "execution location", "execution frequency", "notification channel", "approved services and tokens", "model per role", "next roadmap item vs launch blockers", "launch region and French UI", "minors", "invite-only", "business model", "professional verification and SheerID", "forum_identity disclosure/retention", "moderation staffing", "retention periods", "legal review timing", "production infra/backups/domain", "auto-merge tolerance", "human-only paths", "dependency/plugin policy", "remove irrelevant skills", "version .claude/", "Playwright and coverage", "security sign-off owner"]
+}
