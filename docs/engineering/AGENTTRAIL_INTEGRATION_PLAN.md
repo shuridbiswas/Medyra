@@ -123,7 +123,7 @@ Agenttrail has no panel or metric plugin [doc], so:
 
 ## 6. Local dashboard configuration
 
-- Run `agenttrail up` from the repository folder, with `AGENTTRAIL_PORT=5330` so the port is predictable.
+- Run `agenttrail --no-open` (no subcommand) from the repository folder, with `AGENTTRAIL_PORT=5330` so the port is predictable.
 - Loopback only. Never use port forwarding, tunnels or `0.0.0.0`.
 - **Do not run `agenttrail init`.** It would write PLAN.md (ours is generated), append to `CLAUDE.md` and `AGENTS.md`, append `.agenttrail/` to `.gitignore`, and merge hooks into `.claude/settings.local.json`. Make the equivalent reviewed edits by hand if they are wanted: add `PLAN.md` to `.gitignore`. `.agenttrail/` is not needed, because its storage lives in the home directory.
 
@@ -168,7 +168,7 @@ Agenttrail has no panel or metric plugin [doc], so:
 
 ## 11. Startup (after approval)
 
-1. `npx agenttrail@0.4.1 up` in the repository folder, or a pinned global install.
+1. `npx agenttrail@0.4.1 --no-open` in the repository folder, or a pinned global install. The first run registers the repository; `up` only restarts boards already registered. Without `--no-open`, a first run with no PLAN.md asks to set up the plan convention and defaults to yes (that is `init`): answer `n`.
 2. Open `http://127.0.0.1:5330`.
 3. Optionally add a logon task in Task Scheduler.
 
